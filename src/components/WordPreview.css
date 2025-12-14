@@ -103,45 +103,102 @@
 }
 
 .document-paper {
+  /* 默认值 */
+  --para-font: '宋体', 'SimSun', serif;
+  --para-size: 12pt;
+  --para-line-height: 1.5;
+  --para-spacing: 6pt;
+  --para-indent: 2em;
+  --h1-font: '黑体', 'SimHei', sans-serif;
+  --h1-size: 22pt;
+  --h1-line-height: 1.5;
+  --h1-align: center;
+  --h1-before: 12pt;
+  --h1-after: 6pt;
+  --h2-font: '黑体', 'SimHei', sans-serif;
+  --h2-size: 16pt;
+  --h2-line-height: 1.5;
+  --h2-align: left;
+  --h2-before: 12pt;
+  --h2-after: 6pt;
+  --h3-font: '黑体', 'SimHei', sans-serif;
+  --h3-size: 14pt;
+  --h3-line-height: 1.5;
+  --h3-align: left;
+  --h3-before: 12pt;
+  --h3-after: 6pt;
+  --h4-font: '黑体', 'SimHei', sans-serif;
+  --h4-size: 12pt;
+  --h4-line-height: 1.5;
+  --h4-align: left;
+  --h4-before: 12pt;
+  --h4-after: 6pt;
+
   background: #2d2d30;
   width: 100%;
   max-width: 800px;
   min-height: 100%;
   padding: 60px 72px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  font-family: 'Times New Roman', 'SimSun', serif;
-  font-size: 14px;
-  line-height: 1.8;
+  font-family: var(--para-font);
+  font-size: var(--para-size);
+  line-height: var(--para-line-height);
   color: #d4d4d4;
   border-radius: 4px;
 }
 
 /* Word 样式的 Markdown 渲染 */
 .document-paper h1 {
-  font-size: 22px;
+  font-family: var(--h1-font);
+  font-size: var(--h1-size);
+  line-height: var(--h1-line-height);
+  text-align: var(--h1-align);
   font-weight: bold;
-  text-align: center;
-  margin: 24px 0 16px;
+  margin-top: var(--h1-before);
+  margin-bottom: var(--h1-after);
   color: #e0e0e0;
 }
 
 .document-paper h2 {
-  font-size: 18px;
+  font-family: var(--h2-font);
+  font-size: var(--h2-size);
+  line-height: var(--h2-line-height);
+  text-align: var(--h2-align);
   font-weight: bold;
-  margin: 20px 0 12px;
+  margin-top: var(--h2-before);
+  margin-bottom: var(--h2-after);
   color: #e0e0e0;
 }
 
 .document-paper h3 {
-  font-size: 16px;
+  font-family: var(--h3-font);
+  font-size: var(--h3-size);
+  line-height: var(--h3-line-height);
+  text-align: var(--h3-align);
   font-weight: bold;
-  margin: 16px 0 10px;
+  margin-top: var(--h3-before);
+  margin-bottom: var(--h3-after);
+  color: #e0e0e0;
+}
+
+.document-paper h4 {
+  font-family: var(--h4-font);
+  font-size: var(--h4-size);
+  line-height: var(--h4-line-height);
+  text-align: var(--h4-align);
+  font-weight: bold;
+  margin-top: var(--h4-before);
+  margin-bottom: var(--h4-after);
   color: #e0e0e0;
 }
 
 .document-paper p {
-  text-indent: 2em;
-  margin: 0 0 12px;
+  font-family: var(--para-font);
+  font-size: var(--para-size);
+  line-height: var(--para-line-height);
+  text-indent: var(--para-indent);
+  margin: 0;
+  margin-bottom: var(--para-spacing);
   text-align: justify;
 }
 

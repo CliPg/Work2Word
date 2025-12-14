@@ -66,11 +66,82 @@ async function processPdf(buffer: Buffer): Promise<string> {
   }
 }
 
-// 默认样式设置
-const defaultStyles = {
+// 排版设置类型定义
+export interface ParagraphStyle {
+  fontFamily: string;
+  fontSize: number;
+  lineHeight: number;
+  paragraphSpacing: number;
+  firstLineIndent: number;
+}
+
+export interface HeadingStyle {
+  fontFamily: string;
+  fontSize: number;
+  lineHeight: number;
+  alignment: 'left' | 'center' | 'right' | 'justify';
+  spacingBefore: number;
+  spacingAfter: number;
+}
+
+export interface FormatSettings {
+  paragraph: ParagraphStyle;
+  heading1: HeadingStyle;
+  heading2: HeadingStyle;
+  heading3: HeadingStyle;
+  heading4: HeadingStyle;
+}
+
+// 默认排版设置
+const defaultFormatSettings: FormatSettings = {
+  paragraph: {
+    fontFamily: '宋体',
+    fontSize: 12,
+    lineHeight: 1.5,
+    paragraphSpacing: 6,
+    firstLineIndent: 2,
+  },
+  heading1: {
+    fontFamily: '黑体',
+    fontSize: 22,
+    lineHeight: 1.5,
+    alignment: 'center',
+    spacingBefore: 12,
+    spacingAfter: 6,
+  },
+  heading2: {
+    fontFamily: '黑体',
+    fontSize: 16,
+    lineHeight: 1.5,
+    alignment: 'left',
+    spacingBefore: 12,
+    spacingAfter: 6,
+  },
+  heading3: {
+    fontFamily: '黑体',
+    fontSize: 14,
+    lineHeight: 1.5,
+    alignment: 'left',
+    spacingBefore: 12,
+    spacingAfter: 6,
+  },
+  heading4: {
+    fontFamily: '黑体',
+    fontSize: 12,
+    lineHeight: 1.5,
+    alignment: 'left',
+    spacingBefore: 12,
+    spacingAfter: 6,
+  },
+};
+
+// 默认样式设置（保留兼容）
+const defaultStyles: ParagraphStyle = {
   fontSize: 12, // 磅
   fontFamily: '宋体',
-  headingFontFamily: '黑体',
+  lineHeight: 1.5,
+  paragraphSpacing: 6,
+  firstLineIndent: 2,
 };
 
 // TextRun 配置接口
@@ -114,8 +185,9 @@ function getHeadingFontSize(depth: number): number {
 }
 
 // 解析内联格式（粗体、斜体、删除线、代码等）
-function parseInlineTokens(tokens: any[], baseConfig: Partial<TextRunConfig> = {}): TextRun[] {
+function parseInlineTokens(tokens: any[], baseConfig: Partial<TextRunConfig> = {}, formatSettings?: FormatSettings): TextRun[] {
   const runs: TextRun[] = [];
+  const paraStyle = formatSettings?.paragraph || defaultStyles;
   
   for (const token of tokens) {
     const tokenType = token.type as string;
@@ -124,8 +196,8 @@ function parseInlineTokens(tokens: any[], baseConfig: Partial<TextRunConfig> = {
       case 'text':
         runs.push(new TextRun({
           text: token.text || '',
-          font: baseConfig.font || { name: defaultStyles.fontFamily },
-          size: baseConfig.size || defaultStyles.fontSize * 2,
+          font: baseConfig.font || { name: paraStyle.fontFamily || defaultStyles.fontFamily },
+          size: baseConfig.size || (paraStyle.fontSize || defaultStyles.fontSize) * 2,
           bold: baseConfig.bold,
           italics: baseConfig.italics,
           strike: baseConfig.strike,
@@ -146,8 +218,8 @@ function parseInlineTokens(tokens: any[], baseConfig: Partial<TextRunConfig> = {
         runs.push(new TextRun({
           text: strongText,
           bold: true,
-          font: baseConfig.font || { name: defaultStyles.fontFamily },
-          size: baseConfig.size || defaultStyles.fontSize * 2,
+          font: baseConfig.font || { name: paraStyle.fontFamily || defaultStyles.fontFamily },
+          size: baseConfig.size || (paraStyle.fontSize || defaultStyles.fontSize) * 2,
           italics: baseConfig.italics,
           strike: baseConfig.strike,
           color: baseConfig.color,
@@ -167,8 +239,8 @@ function parseInlineTokens(tokens: any[], baseConfig: Partial<TextRunConfig> = {
         runs.push(new TextRun({
           text: emText,
           italics: true,
-          font: baseConfig.font || { name: defaultStyles.fontFamily },
-          size: baseConfig.size || defaultStyles.fontSize * 2,
+          font: baseConfig.font || { name: paraStyle.fontFamily || defaultStyles.fontFamily },
+          size: baseConfig.size || (paraStyle.fontSize || defaultStyles.fontSize) * 2,
           bold: baseConfig.bold,
           strike: baseConfig.strike,
           color: baseConfig.color,
@@ -187,8 +259,8 @@ function parseInlineTokens(tokens: any[], baseConfig: Partial<TextRunConfig> = {
         runs.push(new TextRun({
           text: delText,
           strike: true,
-          font: baseConfig.font || { name: defaultStyles.fontFamily },
-          size: baseConfig.size || defaultStyles.fontSize * 2,
+          font: baseConfig.font || { name: paraStyle.fontFamily || defaultStyles.fontFamily },
+          size: baseConfig.size || (paraStyle.fontSize || defaultStyles.fontSize) * 2,
           bold: baseConfig.bold,
           italics: baseConfig.italics,
           color: baseConfig.color,
@@ -200,7 +272,7 @@ function parseInlineTokens(tokens: any[], baseConfig: Partial<TextRunConfig> = {
         runs.push(new TextRun({
           text: token.text || '',
           font: { name: 'Courier New' },
-          size: defaultStyles.fontSize * 2,
+          size: (paraStyle.fontSize || defaultStyles.fontSize) * 2,
           shading: { fill: 'F5F5F5' },
         }));
         break;
@@ -214,8 +286,8 @@ function parseInlineTokens(tokens: any[], baseConfig: Partial<TextRunConfig> = {
           text: linkText,
           color: '0563C1',
           underline: {},
-          font: baseConfig.font || { name: defaultStyles.fontFamily },
-          size: baseConfig.size || defaultStyles.fontSize * 2,
+          font: baseConfig.font || { name: paraStyle.fontFamily || defaultStyles.fontFamily },
+          size: baseConfig.size || (paraStyle.fontSize || defaultStyles.fontSize) * 2,
         }));
         break;
       }
@@ -229,8 +301,8 @@ function parseInlineTokens(tokens: any[], baseConfig: Partial<TextRunConfig> = {
         if (token.text) {
           runs.push(new TextRun({
             text: token.text,
-            font: baseConfig.font || { name: defaultStyles.fontFamily },
-            size: baseConfig.size || defaultStyles.fontSize * 2,
+            font: baseConfig.font || { name: paraStyle.fontFamily || defaultStyles.fontFamily },
+            size: baseConfig.size || (paraStyle.fontSize || defaultStyles.fontSize) * 2,
             bold: baseConfig.bold,
             italics: baseConfig.italics,
             strike: baseConfig.strike,
@@ -239,8 +311,8 @@ function parseInlineTokens(tokens: any[], baseConfig: Partial<TextRunConfig> = {
         } else if (token.raw) {
           runs.push(new TextRun({
             text: token.raw,
-            font: baseConfig.font || { name: defaultStyles.fontFamily },
-            size: baseConfig.size || defaultStyles.fontSize * 2,
+            font: baseConfig.font || { name: paraStyle.fontFamily || defaultStyles.fontFamily },
+            size: baseConfig.size || (paraStyle.fontSize || defaultStyles.fontSize) * 2,
             bold: baseConfig.bold,
             italics: baseConfig.italics,
             strike: baseConfig.strike,
@@ -253,10 +325,31 @@ function parseInlineTokens(tokens: any[], baseConfig: Partial<TextRunConfig> = {
   return runs;
 }
 
+// 获取对齐方式
+function getAlignment(align: 'left' | 'center' | 'right' | 'justify'): typeof AlignmentType[keyof typeof AlignmentType] {
+  switch (align) {
+    case 'center': return AlignmentType.CENTER;
+    case 'right': return AlignmentType.RIGHT;
+    case 'justify': return AlignmentType.JUSTIFIED;
+    default: return AlignmentType.LEFT;
+  }
+}
+
+// 默认标题样式
+const defaultHeadingStyles: Record<string, HeadingStyle> = {
+  heading1: { fontFamily: '黑体', fontSize: 22, lineHeight: 1.5, alignment: 'center', spacingBefore: 12, spacingAfter: 12 },
+  heading2: { fontFamily: '黑体', fontSize: 16, lineHeight: 1.5, alignment: 'left', spacingBefore: 12, spacingAfter: 6 },
+  heading3: { fontFamily: '黑体', fontSize: 14, lineHeight: 1.5, alignment: 'left', spacingBefore: 6, spacingAfter: 6 },
+  heading4: { fontFamily: '黑体', fontSize: 12, lineHeight: 1.5, alignment: 'left', spacingBefore: 6, spacingAfter: 6 },
+};
+
 // 创建标题段落
-function createHeadingParagraph(token: any): Paragraph {
+function createHeadingParagraph(token: any, formatSettings?: FormatSettings): Paragraph {
   const depth = token.depth || 1;
-  const fontSize = getHeadingFontSize(depth);
+  
+  // 获取对应级别的标题样式
+  const headingKey = `heading${Math.min(depth, 4)}` as keyof FormatSettings;
+  const headingStyle = (formatSettings?.[headingKey] as HeadingStyle) || defaultHeadingStyles[headingKey];
   
   // 提取标题纯文本（处理可能的内联格式）
   let headingText = token.text || '';
@@ -267,22 +360,25 @@ function createHeadingParagraph(token: any): Paragraph {
   const runs = [new TextRun({
     text: headingText,
     bold: true,
-    font: { name: defaultStyles.headingFontFamily },
-    size: fontSize * 2,
+    font: { name: headingStyle.fontFamily },
+    size: headingStyle.fontSize * 2, // Word 使用半磅
   })];
   
   return new Paragraph({
     children: runs,
+    alignment: getAlignment(headingStyle.alignment),
     spacing: {
-      before: 240, // 12磅
-      after: 120,  // 6磅
+      before: headingStyle.spacingBefore * 20, // 磅转twip
+      after: headingStyle.spacingAfter * 20,
+      line: headingStyle.lineHeight * 240, // 行距倍数转twip
     },
   });
 }
 
 // 简单的文本解析：处理 **加粗** 和 `代码` 格式
-function parseTextWithFormat(text: string, baseConfig: Partial<TextRunConfig> = {}): TextRun[] {
+function parseTextWithFormat(text: string, formatSettings?: FormatSettings, baseConfig: Partial<TextRunConfig> = {}): TextRun[] {
   const runs: TextRun[] = [];
+  const paraStyle = formatSettings?.paragraph || defaultStyles;
   
   // 匹配 **加粗** 或 `代码`
   // 注意：使用 `` 包裹的代码优先级更高，所以先匹配
@@ -297,8 +393,8 @@ function parseTextWithFormat(text: string, baseConfig: Partial<TextRunConfig> = 
       if (normalText) {
         runs.push(new TextRun({
           text: normalText,
-          font: baseConfig.font || { name: defaultStyles.fontFamily },
-          size: baseConfig.size || defaultStyles.fontSize * 2,
+          font: baseConfig.font || { name: paraStyle.fontFamily || defaultStyles.fontFamily },
+          size: baseConfig.size || (paraStyle.fontSize || defaultStyles.fontSize) * 2,
           bold: baseConfig.bold,
           italics: baseConfig.italics,
           color: baseConfig.color,
@@ -311,7 +407,7 @@ function parseTextWithFormat(text: string, baseConfig: Partial<TextRunConfig> = 
       runs.push(new TextRun({
         text: match[2],
         font: { name: 'Courier New' },
-        size: baseConfig.size || defaultStyles.fontSize * 2,
+        size: baseConfig.size || (paraStyle.fontSize || defaultStyles.fontSize) * 2,
         shading: { fill: 'F0F0F0' },
       }));
     } else if (match[3] !== undefined) {
@@ -319,8 +415,8 @@ function parseTextWithFormat(text: string, baseConfig: Partial<TextRunConfig> = 
       runs.push(new TextRun({
         text: match[3],
         bold: true,
-        font: baseConfig.font || { name: defaultStyles.fontFamily },
-        size: baseConfig.size || defaultStyles.fontSize * 2,
+        font: baseConfig.font || { name: paraStyle.fontFamily || defaultStyles.fontFamily },
+        size: baseConfig.size || (paraStyle.fontSize || defaultStyles.fontSize) * 2,
         italics: baseConfig.italics,
         color: baseConfig.color,
       }));
@@ -335,8 +431,8 @@ function parseTextWithFormat(text: string, baseConfig: Partial<TextRunConfig> = 
     if (remainingText) {
       runs.push(new TextRun({
         text: remainingText,
-        font: baseConfig.font || { name: defaultStyles.fontFamily },
-        size: baseConfig.size || defaultStyles.fontSize * 2,
+        font: baseConfig.font || { name: paraStyle.fontFamily || defaultStyles.fontFamily },
+        size: baseConfig.size || (paraStyle.fontSize || defaultStyles.fontSize) * 2,
         bold: baseConfig.bold,
         italics: baseConfig.italics,
         color: baseConfig.color,
@@ -348,8 +444,8 @@ function parseTextWithFormat(text: string, baseConfig: Partial<TextRunConfig> = 
   if (runs.length === 0) {
     runs.push(new TextRun({
       text: text,
-      font: baseConfig.font || { name: defaultStyles.fontFamily },
-      size: baseConfig.size || defaultStyles.fontSize * 2,
+      font: baseConfig.font || { name: paraStyle.fontFamily || defaultStyles.fontFamily },
+      size: baseConfig.size || (paraStyle.fontSize || defaultStyles.fontSize) * 2,
       bold: baseConfig.bold,
       italics: baseConfig.italics,
       color: baseConfig.color,
@@ -360,31 +456,45 @@ function parseTextWithFormat(text: string, baseConfig: Partial<TextRunConfig> = 
 }
 
 // 创建普通段落
-function createParagraphElement(token: any): Paragraph {
+function createParagraphElement(token: any, formatSettings?: FormatSettings): Paragraph {
+  const paraStyle = formatSettings?.paragraph || defaultStyles;
   // 获取段落的原始文本（包含markdown标记）
   const rawText = token.raw || token.text || '';
   // 使用简单的正则处理格式
-  const runs = parseTextWithFormat(rawText);
+  const runs = parseTextWithFormat(rawText, formatSettings);
+  
+  // 计算首行缩进（字符数 * 字号 * 20 twip）
+  const firstLineIndent = (paraStyle.firstLineIndent || 0) * (paraStyle.fontSize || defaultStyles.fontSize) * 20;
   
   return new Paragraph({
     children: runs,
     spacing: {
-      after: 120, // 6磅段后间距
-      line: 360,  // 1.5倍行距 (240 * 1.5)
+      after: (paraStyle.paragraphSpacing || 0) * 20, // 磅转twip
+      line: (paraStyle.lineHeight || defaultStyles.lineHeight) * 240, // 行距倍数转twip
     },
+    indent: (paraStyle.firstLineIndent || 0) > 0 ? {
+      firstLine: firstLineIndent,
+    } : undefined,
   });
 }
 
 // 创建引用块
-function createBlockquoteParagraphs(token: any): Paragraph[] {
+function createBlockquoteParagraphs(token: any, formatSettings?: FormatSettings): Paragraph[] {
   const paragraphs: Paragraph[] = [];
+  const paraStyle = formatSettings?.paragraph || defaultStyles;
   
   if (token.tokens && Array.isArray(token.tokens)) {
     for (const innerToken of token.tokens) {
       if (innerToken.type === 'paragraph') {
         const runs = innerToken.tokens
-          ? parseInlineTokens(innerToken.tokens, { color: '666666', italics: true })
-          : [new TextRun({ text: innerToken.text || '', color: '666666', italics: true })];
+          ? parseInlineTokens(innerToken.tokens, { color: '666666', italics: true }, formatSettings)
+          : [new TextRun({ 
+              text: innerToken.text || '', 
+              color: '666666', 
+              italics: true,
+              font: { name: paraStyle.fontFamily || defaultStyles.fontFamily },
+              size: (paraStyle.fontSize || defaultStyles.fontSize) * 2,
+            })];
         
         paragraphs.push(new Paragraph({
           children: runs,
@@ -462,8 +572,9 @@ function createCodeBlockParagraphs(token: any): Paragraph[] {
 }
 
 // 创建列表项
-function createListItemParagraphs(token: any, level: number = 0): Paragraph[] {
+function createListItemParagraphs(token: any, level: number = 0, formatSettings?: FormatSettings): Paragraph[] {
   const paragraphs: Paragraph[] = [];
+  const paraStyle = formatSettings?.paragraph || defaultStyles;
   const isOrdered = token.ordered || false;
   const bulletChars = ['●', '○', '▪'];
   const bulletChar = isOrdered ? '' : bulletChars[level % 3];
@@ -477,14 +588,14 @@ function createListItemParagraphs(token: any, level: number = 0): Paragraph[] {
     if (item.tokens && Array.isArray(item.tokens)) {
       for (const innerToken of item.tokens) {
         if (innerToken.type === 'text' && innerToken.tokens && Array.isArray(innerToken.tokens)) {
-          runs = runs.concat(parseInlineTokens(innerToken.tokens));
+          runs = runs.concat(parseInlineTokens(innerToken.tokens, {}, formatSettings));
         } else if (innerToken.type === 'paragraph' && innerToken.tokens) {
-          runs = runs.concat(parseInlineTokens(innerToken.tokens));
+          runs = runs.concat(parseInlineTokens(innerToken.tokens, {}, formatSettings));
         } else if (innerToken.text) {
           runs.push(new TextRun({
             text: innerToken.text,
-            font: { name: defaultStyles.fontFamily },
-            size: defaultStyles.fontSize * 2,
+            font: { name: paraStyle.fontFamily || defaultStyles.fontFamily },
+            size: (paraStyle.fontSize || defaultStyles.fontSize) * 2,
           }));
         }
       }
@@ -493,16 +604,16 @@ function createListItemParagraphs(token: any, level: number = 0): Paragraph[] {
     if (runs.length === 0) {
       runs = [new TextRun({
         text: item.text || '',
-        font: { name: defaultStyles.fontFamily },
-        size: defaultStyles.fontSize * 2,
+        font: { name: paraStyle.fontFamily || defaultStyles.fontFamily },
+        size: (paraStyle.fontSize || defaultStyles.fontSize) * 2,
       })];
     }
     
     // 添加列表前缀
     runs.unshift(new TextRun({
       text: prefix,
-      font: { name: defaultStyles.fontFamily },
-      size: defaultStyles.fontSize * 2,
+      font: { name: paraStyle.fontFamily || defaultStyles.fontFamily },
+      size: (paraStyle.fontSize || defaultStyles.fontSize) * 2,
     }));
     
     paragraphs.push(new Paragraph({
@@ -520,7 +631,7 @@ function createListItemParagraphs(token: any, level: number = 0): Paragraph[] {
     if (item.tokens && Array.isArray(item.tokens)) {
       for (const innerToken of item.tokens) {
         if (innerToken.type === 'list') {
-          paragraphs.push(...createListItemParagraphs(innerToken, level + 1));
+          paragraphs.push(...createListItemParagraphs(innerToken, level + 1, formatSettings));
         }
       }
     }
@@ -549,8 +660,9 @@ function createHorizontalRuleParagraph(): Paragraph {
 }
 
 // 创建表格
-function createTableElement(token: any): Table {
+function createTableElement(token: any, formatSettings?: FormatSettings): Table {
   const tableToken = token as any;
+  const paraStyle = formatSettings?.paragraph || defaultStyles;
   const rows: TableRow[] = [];
   
   // 处理表头
@@ -562,8 +674,8 @@ function createTableElement(token: any): Table {
           children: [new TextRun({
             text: cellText,
             bold: true,
-            font: { name: defaultStyles.fontFamily },
-            size: defaultStyles.fontSize * 2,
+            font: { name: paraStyle.fontFamily || defaultStyles.fontFamily },
+            size: (paraStyle.fontSize || defaultStyles.fontSize) * 2,
           })],
           alignment: AlignmentType.CENTER,
         })],
@@ -582,8 +694,8 @@ function createTableElement(token: any): Table {
           children: [new Paragraph({
             children: [new TextRun({
               text: cellText,
-              font: { name: defaultStyles.fontFamily },
-              size: defaultStyles.fontSize * 2,
+              font: { name: paraStyle.fontFamily || defaultStyles.fontFamily },
+              size: (paraStyle.fontSize || defaultStyles.fontSize) * 2,
             })],
           })],
         });
@@ -610,7 +722,7 @@ function createTableElement(token: any): Table {
 }
 
 // 将 Markdown 转换为段落数组（使用 marked 解析器）
-function markdownToParagraphs(mdContent: string): (Paragraph | Table)[] {
+function markdownToParagraphs(mdContent: string, formatSettings?: FormatSettings): (Paragraph | Table)[] {
   const elements: (Paragraph | Table)[] = [];
   
   // 使用 marked.lexer 解析 Markdown 为 tokens
@@ -622,22 +734,22 @@ function markdownToParagraphs(mdContent: string): (Paragraph | Table)[] {
       
       switch (tokenType) {
         case 'heading':
-          elements.push(createHeadingParagraph(token));
+          elements.push(createHeadingParagraph(token, formatSettings));
           break;
         case 'paragraph':
-          elements.push(createParagraphElement(token));
+          elements.push(createParagraphElement(token, formatSettings));
           break;
         case 'blockquote':
-          elements.push(...createBlockquoteParagraphs(token));
+          elements.push(...createBlockquoteParagraphs(token, formatSettings));
           break;
         case 'code':
           elements.push(...createCodeBlockParagraphs(token));
           break;
         case 'list':
-          elements.push(...createListItemParagraphs(token));
+          elements.push(...createListItemParagraphs(token, 0, formatSettings));
           break;
         case 'table':
-          elements.push(createTableElement(token));
+          elements.push(createTableElement(token, formatSettings));
           break;
         case 'hr':
           elements.push(createHorizontalRuleParagraph());
@@ -649,12 +761,13 @@ function markdownToParagraphs(mdContent: string): (Paragraph | Table)[] {
         case 'html':
           // HTML 内容，尝试提取纯文本
           const htmlText = (token as any).text;
+          const paraStyle = formatSettings?.paragraph;
           if (htmlText && htmlText.trim()) {
             elements.push(new Paragraph({
               children: [new TextRun({
                 text: htmlText.replace(/<[^>]*>/g, ''),
-                font: { name: defaultStyles.fontFamily },
-                size: defaultStyles.fontSize * 2,
+                font: { name: paraStyle?.fontFamily || defaultStyles.fontFamily },
+                size: (paraStyle?.fontSize || defaultStyles.fontSize) * 2,
               })],
             }));
           }
@@ -662,12 +775,13 @@ function markdownToParagraphs(mdContent: string): (Paragraph | Table)[] {
         default:
           // 其他类型，尝试提取文本
           const text = (token as any).text;
+          const defaultParaStyle = formatSettings?.paragraph;
           if (text) {
             elements.push(new Paragraph({
               children: [new TextRun({
                 text: text,
-                font: { name: defaultStyles.fontFamily },
-                size: defaultStyles.fontSize * 2,
+                font: { name: defaultParaStyle?.fontFamily || defaultStyles.fontFamily },
+                size: (defaultParaStyle?.fontSize || defaultStyles.fontSize) * 2,
               })],
             }));
           }
@@ -676,12 +790,13 @@ function markdownToParagraphs(mdContent: string): (Paragraph | Table)[] {
       console.error(`处理 token 时发生错误:`, token.type, error);
       // 出错时创建一个简单的文本段落
       const tokenText = (token as any).text || (token as any).raw;
+      const fallbackParaStyle = formatSettings?.paragraph;
       if (tokenText) {
         elements.push(new Paragraph({
           children: [new TextRun({
             text: tokenText,
-            font: { name: defaultStyles.fontFamily },
-            size: defaultStyles.fontSize * 2,
+            font: { name: fallbackParaStyle?.fontFamily || defaultStyles.fontFamily },
+            size: (fallbackParaStyle?.fontSize || defaultStyles.fontSize) * 2,
           })],
         }));
       }
@@ -694,7 +809,8 @@ function markdownToParagraphs(mdContent: string): (Paragraph | Table)[] {
 export async function convertToFormat(
   mdContent: string,
   format: 'doc' | 'pdf' | 'md',
-  outputPath?: string
+  outputPath?: string,
+  formatSettings?: FormatSettings
 ): Promise<{ path: string; buffer?: Buffer }> {
   if (format === 'md') {
     const filePath = outputPath || `output_${Date.now()}.md`;
@@ -706,7 +822,7 @@ export async function convertToFormat(
   
   if (format === 'doc') {
     try {
-      const elements = markdownToParagraphs(mdContent);
+      const elements = markdownToParagraphs(mdContent, formatSettings);
       const doc = new Document({
         sections: [
           {

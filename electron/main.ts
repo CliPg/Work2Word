@@ -148,9 +148,9 @@ ipcMain.handle('save-debug-data', async (_, data: ProcessStepResult, filename: s
   }
 });
 
-ipcMain.handle('convert-file', async (_, mdContent: string, format: 'doc' | 'pdf' | 'md', outputPath?: string) => {
+ipcMain.handle('convert-file', async (_, mdContent: string, format: 'doc' | 'pdf' | 'md', outputPath?: string, formatSettings?: any) => {
   try {
-    const result = await convertToFormat(mdContent, format, outputPath);
+    const result = await convertToFormat(mdContent, format, outputPath, formatSettings);
     return { success: true, ...result };
   } catch (error: any) {
     return { success: false, error: error.message };

@@ -355,7 +355,8 @@ function App() {
       const response = await window.electronAPI.convertFile(
         result,
         format,
-        dialogResult.filePath
+        dialogResult.filePath,
+        formatSettings
       );
 
       if (response.success) {
@@ -406,6 +407,7 @@ function App() {
             content={result}
             loading={loading}
             onSave={handleSave}
+            formatSettings={formatSettings}
           />
         </div>
 

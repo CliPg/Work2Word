@@ -27,7 +27,7 @@ declare global {
       }>;
       // 新增：保存调试数据
       saveDebugData: (data: ProcessStepResult, filename: string) => Promise<{ success: boolean; path?: string; error?: string }>;
-      convertFile: (mdContent: string, format: 'doc' | 'pdf' | 'md', outputPath?: string) => Promise<{ success: boolean; path?: string; buffer?: Buffer; error?: string }>;
+      convertFile: (mdContent: string, format: 'doc' | 'pdf' | 'md', outputPath?: string, formatSettings?: any) => Promise<{ success: boolean; path?: string; buffer?: Buffer; error?: string }>;
       saveFileDialog: (defaultFilename: string) => Promise<{ canceled: boolean; filePath?: string }>;
       openFileDialog: () => Promise<{ canceled: boolean; filePath?: string }>;
     };
