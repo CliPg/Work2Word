@@ -1,0 +1,164 @@
+import { app, BrowserWindow, ipcMain, dialog } from 'electron';
+import * as path from 'path';
+import { processFile, convertToFormat } from './fileProcessor';
+import { callLLM } from './llmService';
+
+let mainWindow: BrowserWindow | null = null;
+
+function createWindow() {
+  mainWindow = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    minWidth: 900,
+    minHeight: 600,
+    backgroundColor: '#ffffff',
+    titleBarStyle: 'hiddenInset',
+    show: false, // 先不显示，等页面加载完成后再显示
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js'),
+    },
+  });
+
+  // 监听页面加载完成
+  mainWindow.webContents.once('did-finish-load', () => {
+    console.log('页面加载完成');
+    if (mainWindow) {
+      mainWindow.show();
+    }
+  });
+
+  // 监听页面加载错误
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+    console.error('页面加载失败:', {
+      errorCode,
+      errorDescription,
+      url: validatedURL,
+    });
+    
+    // 如果是开发模式且连接失败，显示错误信息
+    if (process.env.NODE_ENV === 'development' && errorCode === -106) {
+      mainWindow?.webContents.executeJavaScript(`
+        document.body.innerHTML = \`
+          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: -apple-system, sans-serif;">
+            <h1 style="color: #ff3b30;">无法连接到开发服务器</h1>
+            <p style="color: #86868b; margin: 16px 0;">错误代码: ${errorCode}</p>
+            <p style="color: #86868b;">请确保 Vite 开发服务器正在运行在 http://localhost:5173</p>
+            <p style="color: #86868b; margin-top: 8px;">正在尝试重新加载...</p>
+          </div>
+        \`;
+      `);
+      
+      // 3秒后重试
+      setTimeout(() => {
+        if (mainWindow) {
+          mainWindow.reload();
+        }
+      }, 3000);
+    }
+  });
+
+  // 监听控制台消息
+  mainWindow.webContents.on('console-message', (event, level, message) => {
+    console.log(`[Console ${level}]:`, message);
+  });
+
+  // 开发模式
+  const isDev = !process.env.NODE_ENV || process.env.NODE_ENV === 'development';
+  
+  if (isDev) {
+    console.log('开发模式：尝试加载 http://localhost:5173');
+    mainWindow.loadURL('http://localhost:5173').catch((err) => {
+      console.error('加载 URL 失败:', err);
+    });
+    mainWindow.webContents.openDevTools();
+  } else {
+    console.log('生产模式：加载本地文件');
+    mainWindow.loadFile(path.join(__dirname, '../index.html'));
+  }
+
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
+}
+
+app.whenReady().then(() => {
+  createWindow();
+
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
+  });
+});
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
+});
+
+// IPC handlers
+ipcMain.handle('process-file', async (_, filePath: string) => {
+  try {
+    const content = await processFile(filePath);
+    return { success: true, content };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('call-llm', async (_, prompt: string, fileContent: string, llmConfig: any) => {
+  try {
+    const result = await callLLM(prompt, fileContent, llmConfig);
+    return { success: true, result };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('convert-file', async (_, mdContent: string, format: 'doc' | 'pdf' | 'md', outputPath?: string) => {
+  try {
+    const result = await convertToFormat(mdContent, format, outputPath);
+    return { success: true, ...result };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('save-file-dialog', async (_, defaultFilename: string) => {
+  if (!mainWindow) return { canceled: true };
+  
+  const result = await dialog.showSaveDialog(mainWindow, {
+    defaultPath: defaultFilename,
+    filters: [
+      { name: 'Markdown', extensions: ['md'] },
+      { name: 'Word Document', extensions: ['docx'] },
+      { name: 'PDF', extensions: ['pdf'] },
+    ],
+  });
+  
+  return result;
+});
+
+ipcMain.handle('open-file-dialog', async () => {
+  if (!mainWindow) return { canceled: true };
+  
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openFile'],
+    filters: [
+      { name: '文档文件', extensions: ['doc', 'docx', 'pdf', 'txt'] },
+      { name: 'Word 文档', extensions: ['doc', 'docx'] },
+      { name: 'PDF 文档', extensions: ['pdf'] },
+      { name: '文本文件', extensions: ['txt'] },
+    ],
+  });
+  
+  if (result.canceled || result.filePaths.length === 0) {
+    return { canceled: true };
+  }
+  
+  return { canceled: false, filePath: result.filePaths[0] };
+});
+
