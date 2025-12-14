@@ -280,15 +280,18 @@ function createHeadingParagraph(token: any): Paragraph {
   });
 }
 
-// 简单的文本解析：处理 **加粗** 格式
-function parseTextWithBold(text: string, baseConfig: Partial<TextRunConfig> = {}): TextRun[] {
+// 简单的文本解析：处理 **加粗** 和 `代码` 格式
+function parseTextWithFormat(text: string, baseConfig: Partial<TextRunConfig> = {}): TextRun[] {
   const runs: TextRun[] = [];
-  const regex = /\*\*(.+?)\*\*/g;
+  
+  // 匹配 **加粗** 或 `代码`
+  // 注意：使用 `` 包裹的代码优先级更高，所以先匹配
+  const regex = /(`+)([^`]+)\1|\*\*(.+?)\*\*/g;
   let lastIndex = 0;
   let match;
   
   while ((match = regex.exec(text)) !== null) {
-    // 添加加粗前的普通文本
+    // 添加匹配前的普通文本
     if (match.index > lastIndex) {
       const normalText = text.slice(lastIndex, match.index);
       if (normalText) {
@@ -303,15 +306,25 @@ function parseTextWithBold(text: string, baseConfig: Partial<TextRunConfig> = {}
       }
     }
     
-    // 添加加粗文本
-    runs.push(new TextRun({
-      text: match[1],
-      bold: true,
-      font: baseConfig.font || { name: defaultStyles.fontFamily },
-      size: baseConfig.size || defaultStyles.fontSize * 2,
-      italics: baseConfig.italics,
-      color: baseConfig.color,
-    }));
+    if (match[2] !== undefined) {
+      // 匹配到行内代码 `code`
+      runs.push(new TextRun({
+        text: match[2],
+        font: { name: 'Courier New' },
+        size: baseConfig.size || defaultStyles.fontSize * 2,
+        shading: { fill: 'F0F0F0' },
+      }));
+    } else if (match[3] !== undefined) {
+      // 匹配到加粗 **text**
+      runs.push(new TextRun({
+        text: match[3],
+        bold: true,
+        font: baseConfig.font || { name: defaultStyles.fontFamily },
+        size: baseConfig.size || defaultStyles.fontSize * 2,
+        italics: baseConfig.italics,
+        color: baseConfig.color,
+      }));
+    }
     
     lastIndex = regex.lastIndex;
   }
@@ -350,8 +363,8 @@ function parseTextWithBold(text: string, baseConfig: Partial<TextRunConfig> = {}
 function createParagraphElement(token: any): Paragraph {
   // 获取段落的原始文本（包含markdown标记）
   const rawText = token.raw || token.text || '';
-  // 使用简单的正则处理加粗
-  const runs = parseTextWithBold(rawText);
+  // 使用简单的正则处理格式
+  const runs = parseTextWithFormat(rawText);
   
   return new Paragraph({
     children: runs,
