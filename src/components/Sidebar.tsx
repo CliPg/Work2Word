@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Upload, Settings, File, Loader2, MessageSquare, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { Send, Upload, Settings, File, Loader2, MessageSquare, ChevronDown, ChevronUp, X, Type } from 'lucide-react';
 import './Sidebar.css';
 
 interface LLMConfigType {
@@ -32,6 +32,9 @@ interface SidebarProps {
   llmConfig: LLMConfigType;
   onConfigChange: (config: LLMConfigType) => void;
   
+  // 排版设置
+  onOpenFormatSettings: () => void;
+  
   // 状态
   loading: boolean;
   processingStep: string;
@@ -49,6 +52,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   messages,
   llmConfig,
   onConfigChange,
+  onOpenFormatSettings,
   loading,
   processingStep,
   error,
@@ -190,6 +194,18 @@ const Sidebar: React.FC<SidebarProps> = ({
             </div>
           </div>
         )}
+      </div>
+
+      {/* 排版设置按钮 */}
+      <div className="sidebar-section format-section">
+        <div 
+          className="section-header clickable"
+          onClick={onOpenFormatSettings}
+        >
+          <Type size={14} />
+          <span>排版格式</span>
+          <ChevronDown size={14} style={{ transform: 'rotate(-90deg)' }} />
+        </div>
       </div>
 
       {/* 对话区域 */}

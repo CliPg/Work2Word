@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import MarkdownEditor from './components/MarkdownEditor';
 import WordPreview from './components/WordPreview';
 import Sidebar from './components/Sidebar';
+import FormatSettingsPanel, { FormatSettings, defaultFormatSettings } from './components/FormatSettings';
 import './App.css';
 
 interface LLMConfigType {
@@ -31,6 +32,7 @@ interface Message {
 }
 
 const STORAGE_KEY = 'work2word_config';
+const FORMAT_STORAGE_KEY = 'work2word_format';
 
 function App() {
   const [filePath, setFilePath] = useState<string>('');
@@ -56,7 +58,22 @@ function App() {
     };
   };
 
+  // 从 localStorage 加载排版设置
+  const loadFormatSettings = (): FormatSettings => {
+    try {
+      const saved = localStorage.getItem(FORMAT_STORAGE_KEY);
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.error('加载排版设置失败:', e);
+    }
+    return defaultFormatSettings;
+  };
+
   const [llmConfig, setLLMConfig] = useState<LLMConfigType>(loadConfig);
+  const [formatSettings, setFormatSettings] = useState<FormatSettings>(loadFormatSettings);
+  const [formatPanelVisible, setFormatPanelVisible] = useState(false);
   const [result, setResult] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [fileLoading, setFileLoading] = useState<boolean>(false);
@@ -175,6 +192,15 @@ function App() {
       console.error('保存配置失败:', e);
     }
   }, [llmConfig]);
+
+  // 保存排版设置到 localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(FORMAT_STORAGE_KEY, JSON.stringify(formatSettings));
+    } catch (e) {
+      console.error('保存排版设置失败:', e);
+    }
+  }, [formatSettings]);
 
   const handleFileSelect = async () => {
     try {
@@ -318,7 +344,7 @@ function App() {
     try {
       setError('');
       const dialogResult = await window.electronAPI.saveFileDialog(
-        `作业_${Date.now()}.${format === 'doc' ? 'docx' : format}`
+        `作业_${Date.now()}`
       );
 
       if (dialogResult.canceled) {
@@ -401,6 +427,7 @@ function App() {
             messages={messages}
             llmConfig={llmConfig}
             onConfigChange={setLLMConfig}
+            onOpenFormatSettings={() => setFormatPanelVisible(true)}
             loading={loading}
             processingStep={processingStep}
             error={error}
@@ -408,6 +435,14 @@ function App() {
           />
         </div>
       </div>
+
+      {/* 排版设置面板 */}
+      <FormatSettingsPanel
+        visible={formatPanelVisible}
+        onClose={() => setFormatPanelVisible(false)}
+        settings={formatSettings}
+        onSettingsChange={setFormatSettings}
+      />
 
       {/* 状态栏 */}
       <div className="status-bar">
