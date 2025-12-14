@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import MarkdownEditor from './components/MarkdownEditor';
 import WordPreview from './components/WordPreview';
 import Sidebar from './components/Sidebar';
@@ -63,6 +63,109 @@ function App() {
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
   const [processingStep, setProcessingStep] = useState<string>('');
+
+  // 面板宽度状态 (百分比)
+  const [editorWidth, setEditorWidth] = useState<number>(33);
+  const [previewWidth, setPreviewWidth] = useState<number>(34);
+  const [sidebarWidth, setSidebarWidth] = useState<number>(33);
+  
+  // 拖拽相关
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isDragging = useRef<'left' | 'right' | null>(null);
+  const startX = useRef<number>(0);
+  const startWidths = useRef<{ editor: number; preview: number; sidebar: number }>({ editor: 33, preview: 34, sidebar: 33 });
+
+  // 处理鼠标按下事件
+  const handleMouseDown = useCallback((resizer: 'left' | 'right') => (e: React.MouseEvent) => {
+    e.preventDefault();
+    isDragging.current = resizer;
+    startX.current = e.clientX;
+    startWidths.current = { editor: editorWidth, preview: previewWidth, sidebar: sidebarWidth };
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }, [editorWidth, previewWidth, sidebarWidth]);
+
+  // 处理鼠标移动事件
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging.current || !containerRef.current) return;
+      
+      const containerWidth = containerRef.current.offsetWidth;
+      const deltaX = e.clientX - startX.current;
+      const deltaPercent = (deltaX / containerWidth) * 100;
+      
+      const minWidth = 15; // 最小宽度百分比
+      const maxWidth = 60; // 最大宽度百分比
+      
+      if (isDragging.current === 'left') {
+        // 调整编辑器和预览之间的分隔条
+        let newEditorWidth = startWidths.current.editor + deltaPercent;
+        let newPreviewWidth = startWidths.current.preview - deltaPercent;
+        
+        // 限制宽度范围
+        if (newEditorWidth < minWidth) {
+          newPreviewWidth += (newEditorWidth - minWidth);
+          newEditorWidth = minWidth;
+        }
+        if (newEditorWidth > maxWidth) {
+          newPreviewWidth += (newEditorWidth - maxWidth);
+          newEditorWidth = maxWidth;
+        }
+        if (newPreviewWidth < minWidth) {
+          newEditorWidth += (newPreviewWidth - minWidth);
+          newPreviewWidth = minWidth;
+        }
+        if (newPreviewWidth > maxWidth) {
+          newEditorWidth += (newPreviewWidth - maxWidth);
+          newPreviewWidth = maxWidth;
+        }
+        
+        setEditorWidth(newEditorWidth);
+        setPreviewWidth(newPreviewWidth);
+      } else if (isDragging.current === 'right') {
+        // 调整预览和侧边栏之间的分隔条
+        let newPreviewWidth = startWidths.current.preview + deltaPercent;
+        let newSidebarWidth = startWidths.current.sidebar - deltaPercent;
+        
+        // 限制宽度范围
+        if (newPreviewWidth < minWidth) {
+          newSidebarWidth += (newPreviewWidth - minWidth);
+          newPreviewWidth = minWidth;
+        }
+        if (newPreviewWidth > maxWidth) {
+          newSidebarWidth += (newPreviewWidth - maxWidth);
+          newPreviewWidth = maxWidth;
+        }
+        if (newSidebarWidth < minWidth) {
+          newPreviewWidth += (newSidebarWidth - minWidth);
+          newSidebarWidth = minWidth;
+        }
+        if (newSidebarWidth > maxWidth) {
+          newPreviewWidth += (newSidebarWidth - maxWidth);
+          newSidebarWidth = maxWidth;
+        }
+        
+        setPreviewWidth(newPreviewWidth);
+        setSidebarWidth(newSidebarWidth);
+      }
+    };
+    
+    const handleMouseUp = () => {
+      if (isDragging.current) {
+        isDragging.current = null;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      }
+    };
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
 
   // 保存配置到 localStorage
   useEffect(() => {
@@ -255,9 +358,9 @@ function App() {
       </div>
 
       {/* 主内容区 */}
-      <div className="main-content">
+      <div className="main-content" ref={containerRef}>
         {/* 左侧: Markdown 编辑器 */}
-        <div className="panel editor-panel">
+        <div className="panel editor-panel" style={{ width: `${editorWidth}%` }}>
           <MarkdownEditor
             value={result}
             onChange={setResult}
@@ -266,10 +369,13 @@ function App() {
         </div>
 
         {/* 分隔条 */}
-        <div className="panel-resizer" />
+        <div 
+          className="panel-resizer" 
+          onMouseDown={handleMouseDown('left')}
+        />
 
         {/* 中间: Word 预览 */}
-        <div className="panel preview-panel">
+        <div className="panel preview-panel" style={{ width: `${previewWidth}%` }}>
           <WordPreview
             content={result}
             loading={loading}
@@ -278,10 +384,13 @@ function App() {
         </div>
 
         {/* 分隔条 */}
-        <div className="panel-resizer" />
+        <div 
+          className="panel-resizer" 
+          onMouseDown={handleMouseDown('right')}
+        />
 
         {/* 右侧: 侧边栏 */}
-        <div className="panel sidebar-panel">
+        <div className="panel sidebar-panel" style={{ width: `${sidebarWidth}%` }}>
           <Sidebar
             filePath={filePath}
             onFileSelect={handleFileSelect}

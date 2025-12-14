@@ -71,33 +71,46 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .editor-panel {
-  flex: 1;
-  min-width: 300px;
+  min-width: 200px;
 }
 
 .preview-panel {
-  flex: 1;
-  min-width: 300px;
+  min-width: 200px;
 }
 
 .sidebar-panel {
-  width: 320px;
-  min-width: 280px;
-  max-width: 400px;
+  min-width: 200px;
 }
 
 /* 分隔条 */
 .panel-resizer {
-  width: 1px;
+  width: 4px;
   background: #3c3c3c;
   cursor: col-resize;
   transition: background 0.15s ease;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.panel-resizer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -3px;
+  right: -3px;
+  z-index: 10;
 }
 
 .panel-resizer:hover {
+  background: #667eea;
+}
+
+.panel-resizer:active {
   background: #667eea;
 }
 
@@ -129,9 +142,10 @@
 
 /* 响应式布局 */
 @media (max-width: 1200px) {
+  .editor-panel,
+  .preview-panel,
   .sidebar-panel {
-    width: 280px;
-    min-width: 240px;
+    min-width: 180px;
   }
 }
 
@@ -149,12 +163,8 @@
   }
   
   .editor-panel,
-  .preview-panel {
-    min-width: 200px;
-  }
-  
+  .preview-panel,
   .sidebar-panel {
-    width: 240px;
-    min-width: 200px;
+    min-width: 150px;
   }
 }
