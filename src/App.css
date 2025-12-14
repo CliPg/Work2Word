@@ -13,6 +13,9 @@
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-bottom: 0.5px solid rgba(0, 0, 0, 0.1);
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .app-header h1 {
@@ -27,6 +30,23 @@
   font-size: 13px;
   color: #86868b;
   font-weight: 400;
+}
+
+.debug-toggle-btn {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.debug-toggle-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
 .app-main {
@@ -61,6 +81,103 @@
   min-width: 400px;
 }
 
+/* 处理步骤提示 */
+.processing-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  border-radius: 8px;
+  font-size: 14px;
+  color: #667eea;
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  animation: pulse 2s infinite;
+}
+
+.step-indicator {
+  font-size: 16px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 调试面板样式 */
+.debug-panel {
+  background: linear-gradient(135deg, #f8f9ff 0%, #f3f0ff 100%);
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.debug-panel h3 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  color: #667eea;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.debug-section {
+  background: white;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.debug-section:last-child {
+  margin-bottom: 0;
+}
+
+.debug-section h4 {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  color: #764ba2;
+  font-weight: 600;
+}
+
+.debug-section pre {
+  margin: 0;
+  padding: 12px;
+  background: #f5f5f7;
+  border-radius: 6px;
+  font-size: 11px;
+  line-height: 1.5;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.debug-section small {
+  display: block;
+  margin-top: 8px;
+  color: #86868b;
+  font-size: 11px;
+}
+
 @media (max-width: 1024px) {
   .app-main {
     flex-direction: column;
@@ -74,23 +191,31 @@
 
 /* 滚动条样式 */
 .left-panel::-webkit-scrollbar,
-.right-panel::-webkit-scrollbar {
+.right-panel::-webkit-scrollbar,
+.debug-panel::-webkit-scrollbar,
+.debug-section pre::-webkit-scrollbar {
   width: 8px;
 }
 
 .left-panel::-webkit-scrollbar-track,
-.right-panel::-webkit-scrollbar-track {
+.right-panel::-webkit-scrollbar-track,
+.debug-panel::-webkit-scrollbar-track,
+.debug-section pre::-webkit-scrollbar-track {
   background: transparent;
 }
 
 .left-panel::-webkit-scrollbar-thumb,
-.right-panel::-webkit-scrollbar-thumb {
+.right-panel::-webkit-scrollbar-thumb,
+.debug-panel::-webkit-scrollbar-thumb,
+.debug-section pre::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.2);
   border-radius: 4px;
 }
 
 .left-panel::-webkit-scrollbar-thumb:hover,
-.right-panel::-webkit-scrollbar-thumb:hover {
+.right-panel::-webkit-scrollbar-thumb:hover,
+.debug-panel::-webkit-scrollbar-thumb:hover,
+.debug-section pre::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 0, 0, 0.3);
 }
 

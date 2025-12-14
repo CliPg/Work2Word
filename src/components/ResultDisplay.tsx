@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Download, FileText, File, FileCode, Loader2, AlertCircle } from 'lucide-react';
+import { FileText, File, FileCode, Loader2, AlertCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import './ResultDisplay.css';
 

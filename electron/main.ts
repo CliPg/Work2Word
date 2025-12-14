@@ -1,7 +1,8 @@
 import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 import * as path from 'path';
+import * as fs from 'fs/promises';
 import { processFile, convertToFormat } from './fileProcessor';
-import { callLLM } from './llmService';
+import { callLLM, processHomework, ProcessStepResult, HomeworkProcessResult } from './llmService';
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -113,6 +114,35 @@ ipcMain.handle('call-llm', async (_, prompt: string, fileContent: string, llmCon
   try {
     const result = await callLLM(prompt, fileContent, llmConfig);
     return { success: true, result };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+// 新增：分步处理作业接口
+ipcMain.handle('process-homework-steps', async (_, prompt: string, fileContent: string, llmConfig: any) => {
+  try {
+    const result = await processHomework(prompt, fileContent, llmConfig);
+    return { success: true, result };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+// 新增：保存调试数据接口
+ipcMain.handle('save-debug-data', async (_, data: ProcessStepResult, filename: string) => {
+  try {
+    // 获取用户文档目录
+    const documentsPath = app.getPath('documents');
+    const debugDir = path.join(documentsPath, 'Work2Word_Debug');
+    
+    // 确保目录存在
+    await fs.mkdir(debugDir, { recursive: true });
+    
+    const filePath = path.join(debugDir, filename);
+    await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
+    
+    return { success: true, path: filePath };
   } catch (error: any) {
     return { success: false, error: error.message };
   }

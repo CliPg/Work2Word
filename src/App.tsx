@@ -12,6 +12,18 @@ interface LLMConfigType {
   model: string;
 }
 
+interface ProcessStepResult {
+  step: 'format' | 'questions' | 'final';
+  content: string;
+  timestamp: string;
+}
+
+interface HomeworkProcessResult {
+  formatTemplate: ProcessStepResult;
+  questionsAnswer: ProcessStepResult;
+  finalResult: ProcessStepResult;
+}
+
 const STORAGE_KEY = 'work2word_config';
 
 function App() {
@@ -42,6 +54,11 @@ function App() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
+  
+  // 新增：处理进度状态
+  const [processingStep, setProcessingStep] = useState<string>('');
+  const [debugData, setDebugData] = useState<HomeworkProcessResult | null>(null);
+  const [showDebug, setShowDebug] = useState<boolean>(false);
 
   // 保存配置到 localStorage
   useEffect(() => {
@@ -106,15 +123,38 @@ function App() {
       setError('');
       setSuccess('');
       setLoading(true);
-      const response = await window.electronAPI.callLLM(
+      setDebugData(null);
+      
+      // 使用分步处理
+      setProcessingStep('正在分析作业格式要求...');
+      const response = await window.electronAPI.processHomeworkSteps(
         prompt,
         fileContent,
         llmConfig
       );
+      
       if (response.success && response.result) {
-        setResult(response.result);
-        setSuccess('✅ 作业处理完成！');
-        setTimeout(() => setSuccess(''), 3000);
+        const processResult = response.result as HomeworkProcessResult;
+        setDebugData(processResult);
+        setResult(processResult.finalResult.content);
+        
+        // 自动保存调试数据
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        await window.electronAPI.saveDebugData(
+          processResult.formatTemplate,
+          `format_template_${timestamp}.json`
+        );
+        await window.electronAPI.saveDebugData(
+          processResult.questionsAnswer,
+          `questions_answer_${timestamp}.json`
+        );
+        await window.electronAPI.saveDebugData(
+          processResult.finalResult,
+          `final_result_${timestamp}.json`
+        );
+        
+        setSuccess('✅ 作业处理完成！调试数据已保存到文档目录的 Work2Word_Debug 文件夹');
+        setTimeout(() => setSuccess(''), 5000);
       } else {
         setError(response.error || '处理失败');
       }
@@ -123,6 +163,7 @@ function App() {
       setError(err.message || '处理失败');
     } finally {
       setLoading(false);
+      setProcessingStep('');
     }
   };
 
@@ -175,6 +216,14 @@ function App() {
     <div className="app">
       <header className="app-header">
         <h1>Work2Word</h1>
+        {debugData && (
+          <button 
+            className="debug-toggle-btn"
+            onClick={() => setShowDebug(!showDebug)}
+          >
+            {showDebug ? '隐藏调试' : '显示调试'}
+          </button>
+        )}
       </header>
 
       <main className="app-main">
@@ -190,6 +239,12 @@ function App() {
             onProcess={handleProcess}
             disabled={loading || !fileContent}
           />
+          {processingStep && (
+            <div className="processing-step">
+              <span className="step-indicator">⏳</span>
+              {processingStep}
+            </div>
+          )}
           <LLMConfig
             config={llmConfig}
             onChange={setLLMConfig}
@@ -198,6 +253,25 @@ function App() {
         </div>
 
         <div className="right-panel">
+          {showDebug && debugData && (
+            <div className="debug-panel">
+              <h3>🔧 调试数据</h3>
+              <div className="debug-section">
+                <h4>步骤1: 格式模版提取</h4>
+                <pre>{debugData.formatTemplate.content}</pre>
+                <small>时间: {debugData.formatTemplate.timestamp}</small>
+              </div>
+              <div className="debug-section">
+                <h4>步骤2: 题目提取与解答</h4>
+                <pre>{debugData.questionsAnswer.content}</pre>
+                <small>时间: {debugData.questionsAnswer.timestamp}</small>
+              </div>
+              <div className="debug-section">
+                <h4>步骤3: 最终文档生成</h4>
+                <small>时间: {debugData.finalResult.timestamp}</small>
+              </div>
+            </div>
+          )}
           <ResultDisplay
             result={result}
             loading={loading}
@@ -212,4 +286,3 @@ function App() {
 }
 
 export default App;
-
