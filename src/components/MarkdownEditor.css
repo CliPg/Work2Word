@@ -1,0 +1,128 @@
+.markdown-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #1e1e1e;
+  border-radius: 0;
+  overflow: hidden;
+}
+
+.editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #252526;
+  border-bottom: 1px solid #3c3c3c;
+  min-height: 35px;
+}
+
+.editor-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #cccccc;
+  font-weight: 500;
+}
+
+.editor-title svg {
+  color: #89d185;
+}
+
+.editor-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.editor-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: transparent;
+  color: #cccccc;
+  border: none;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.editor-action-btn:hover:not(:disabled) {
+  background: #3c3c3c;
+}
+
+.editor-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.editor-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.line-numbers {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 0;
+  background: #1e1e1e;
+  border-right: 1px solid #3c3c3c;
+  min-width: 40px;
+  text-align: right;
+  user-select: none;
+  overflow-y: auto;
+}
+
+.line-number {
+  padding: 0 12px 0 8px;
+  font-size: 12px;
+  line-height: 20px;
+  color: #6e7681;
+  font-family: 'SF Mono', 'Monaco', 'Menlo', 'Consolas', monospace;
+}
+
+.editor-textarea {
+  flex: 1;
+  padding: 12px;
+  background: #1e1e1e;
+  color: #d4d4d4;
+  border: none;
+  outline: none;
+  resize: none;
+  font-family: 'SF Mono', 'Monaco', 'Menlo', 'Consolas', monospace;
+  font-size: 13px;
+  line-height: 20px;
+  overflow-y: auto;
+}
+
+.editor-textarea::placeholder {
+  color: #6e7681;
+}
+
+.editor-textarea:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* 自定义滚动条 */
+.editor-textarea::-webkit-scrollbar,
+.line-numbers::-webkit-scrollbar {
+  width: 10px;
+}
+
+.editor-textarea::-webkit-scrollbar-track,
+.line-numbers::-webkit-scrollbar-track {
+  background: #1e1e1e;
+}
+
+.editor-textarea::-webkit-scrollbar-thumb {
+  background: #424242;
+  border-radius: 5px;
+}
+
+.editor-textarea::-webkit-scrollbar-thumb:hover {
+  background: #4f4f4f;
+}
