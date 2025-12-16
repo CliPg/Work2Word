@@ -375,14 +375,119 @@ function createHeadingParagraph(token: any, formatSettings?: FormatSettings): Pa
   });
 }
 
-// 简单的文本解析：处理 **加粗** 和 `代码` 格式
+// LaTeX 到 Unicode 的简单转换映射
+const latexToUnicode: Record<string, string> = {
+  // 希腊字母
+  '\\alpha': 'α', '\\beta': 'β', '\\gamma': 'γ', '\\delta': 'δ',
+  '\\epsilon': 'ε', '\\zeta': 'ζ', '\\eta': 'η', '\\theta': 'θ',
+  '\\iota': 'ι', '\\kappa': 'κ', '\\lambda': 'λ', '\\mu': 'μ',
+  '\\nu': 'ν', '\\xi': 'ξ', '\\pi': 'π', '\\rho': 'ρ',
+  '\\sigma': 'σ', '\\tau': 'τ', '\\upsilon': 'υ', '\\phi': 'φ',
+  '\\chi': 'χ', '\\psi': 'ψ', '\\omega': 'ω',
+  '\\Gamma': 'Γ', '\\Delta': 'Δ', '\\Theta': 'Θ', '\\Lambda': 'Λ',
+  '\\Xi': 'Ξ', '\\Pi': 'Π', '\\Sigma': 'Σ', '\\Phi': 'Φ',
+  '\\Psi': 'Ψ', '\\Omega': 'Ω',
+  // 运算符
+  '\\times': '×', '\\div': '÷', '\\pm': '±', '\\mp': '∓',
+  '\\cdot': '·', '\\ast': '∗', '\\star': '⋆',
+  '\\leq': '≤', '\\geq': '≥', '\\neq': '≠', '\\approx': '≈',
+  '\\equiv': '≡', '\\sim': '∼', '\\simeq': '≃',
+  '\\ll': '≪', '\\gg': '≫', '\\subset': '⊂', '\\supset': '⊃',
+  '\\subseteq': '⊆', '\\supseteq': '⊇', '\\in': '∈', '\\ni': '∋',
+  '\\notin': '∉', '\\cap': '∩', '\\cup': '∪',
+  '\\land': '∧', '\\lor': '∨', '\\neg': '¬',
+  '\\forall': '∀', '\\exists': '∃', '\\partial': '∂',
+  '\\nabla': '∇', '\\infty': '∞', '\\emptyset': '∅',
+  '\\sum': '∑', '\\prod': '∏', '\\int': '∫',
+  '\\sqrt': '√', '\\angle': '∠', '\\perp': '⊥', '\\parallel': '∥',
+  '\\triangle': '△', '\\square': '□', '\\circ': '∘',
+  '\\rightarrow': '→', '\\leftarrow': '←', '\\Rightarrow': '⇒', '\\Leftarrow': '⇐',
+  '\\leftrightarrow': '↔', '\\Leftrightarrow': '⇔',
+  '\\uparrow': '↑', '\\downarrow': '↓',
+  '\\ldots': '…', '\\cdots': '⋯', '\\vdots': '⋮', '\\ddots': '⋱',
+  // 特殊符号
+  '\\prime': '′', '\\degree': '°', '\\%': '%',
+};
+
+// 将简单的 LaTeX 转换为 Unicode
+function latexToUnicodeText(latex: string): string {
+  let result = latex;
+  
+  // 替换已知的 LaTeX 命令
+  for (const [cmd, unicode] of Object.entries(latexToUnicode)) {
+    result = result.replace(new RegExp(cmd.replace(/\\/g, '\\\\'), 'g'), unicode);
+  }
+  
+  // 处理上标 ^{...} 或 ^x
+  result = result.replace(/\^{([^}]+)}/g, (_, content) => {
+    return content.split('').map((c: string) => {
+      const superscripts: Record<string, string> = {
+        '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴',
+        '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹',
+        '+': '⁺', '-': '⁻', '=': '⁼', '(': '⁽', ')': '⁾',
+        'n': 'ⁿ', 'i': 'ⁱ',
+      };
+      return superscripts[c] || c;
+    }).join('');
+  });
+  result = result.replace(/\^(\d)/g, (_, d) => {
+    const superscripts: Record<string, string> = {
+      '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴',
+      '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹',
+    };
+    return superscripts[d] || d;
+  });
+  
+  // 处理下标 _{...} 或 _x
+  result = result.replace(/_{([^}]+)}/g, (_, content) => {
+    return content.split('').map((c: string) => {
+      const subscripts: Record<string, string> = {
+        '0': '₀', '1': '₁', '2': '₂', '3': '₃', '4': '₄',
+        '5': '₅', '6': '₆', '7': '₇', '8': '₈', '9': '₉',
+        '+': '₊', '-': '₋', '=': '₌', '(': '₍', ')': '₎',
+        'a': 'ₐ', 'e': 'ₑ', 'o': 'ₒ', 'x': 'ₓ',
+        'i': 'ᵢ', 'j': 'ⱼ', 'n': 'ₙ', 'm': 'ₘ',
+      };
+      return subscripts[c] || c;
+    }).join('');
+  });
+  result = result.replace(/_(\d)/g, (_, d) => {
+    const subscripts: Record<string, string> = {
+      '0': '₀', '1': '₁', '2': '₂', '3': '₃', '4': '₄',
+      '5': '₅', '6': '₆', '7': '₇', '8': '₈', '9': '₉',
+    };
+    return subscripts[d] || d;
+  });
+  
+  // 处理分数 \frac{a}{b} -> a/b
+  result = result.replace(/\\frac{([^}]+)}{([^}]+)}/g, '($1/$2)');
+  
+  // 处理平方根 \sqrt{x} -> √x
+  result = result.replace(/\\sqrt{([^}]+)}/g, '√($1)');
+  
+  // 处理阶乘 n! 保持不变
+  // 移除剩余的 LaTeX 命令格式如 \text{...}
+  result = result.replace(/\\text{([^}]+)}/g, '$1');
+  result = result.replace(/\\mathrm{([^}]+)}/g, '$1');
+  result = result.replace(/\\mathbf{([^}]+)}/g, '$1');
+  
+  // 清理多余的花括号
+  result = result.replace(/{([^{}]+)}/g, '$1');
+  
+  // 清理空格
+  result = result.replace(/\s+/g, ' ').trim();
+  
+  return result;
+}
+
+// 简单的文本解析：处理 **加粗**、`代码` 和 $公式$ 格式
 function parseTextWithFormat(text: string, formatSettings?: FormatSettings, baseConfig: Partial<TextRunConfig> = {}): TextRun[] {
   const runs: TextRun[] = [];
   const paraStyle = formatSettings?.paragraph || defaultStyles;
   
-  // 匹配 **加粗** 或 `代码`
-  // 注意：使用 `` 包裹的代码优先级更高，所以先匹配
-  const regex = /(`+)([^`]+)\1|\*\*(.+?)\*\*/g;
+  // 匹配 **加粗**、`代码` 或 $公式$（包括 $$公式$$）
+  // 注意顺序：先匹配 $$ ，再匹配 $
+  const regex = /(\$\$([^$]+)\$\$)|(\$([^$]+)\$)|(`+)([^`]+)\5|\*\*(.+?)\*\*/g;
   let lastIndex = 0;
   let match;
   
@@ -403,17 +508,35 @@ function parseTextWithFormat(text: string, formatSettings?: FormatSettings, base
     }
     
     if (match[2] !== undefined) {
+      // 匹配到块级公式 $$...$$ 
+      const unicodeFormula = latexToUnicodeText(match[2]);
+      runs.push(new TextRun({
+        text: unicodeFormula,
+        font: { name: 'Cambria Math' },
+        size: baseConfig.size || (paraStyle.fontSize || defaultStyles.fontSize) * 2,
+        italics: true,
+      }));
+    } else if (match[4] !== undefined) {
+      // 匹配到行内公式 $...$
+      const unicodeFormula = latexToUnicodeText(match[4]);
+      runs.push(new TextRun({
+        text: unicodeFormula,
+        font: { name: 'Cambria Math' },
+        size: baseConfig.size || (paraStyle.fontSize || defaultStyles.fontSize) * 2,
+        italics: true,
+      }));
+    } else if (match[6] !== undefined) {
       // 匹配到行内代码 `code`
       runs.push(new TextRun({
-        text: match[2],
+        text: match[6],
         font: { name: 'Courier New' },
         size: baseConfig.size || (paraStyle.fontSize || defaultStyles.fontSize) * 2,
         shading: { fill: 'F0F0F0' },
       }));
-    } else if (match[3] !== undefined) {
+    } else if (match[7] !== undefined) {
       // 匹配到加粗 **text**
       runs.push(new TextRun({
-        text: match[3],
+        text: match[7],
         bold: true,
         font: baseConfig.font || { name: paraStyle.fontFamily || defaultStyles.fontFamily },
         size: baseConfig.size || (paraStyle.fontSize || defaultStyles.fontSize) * 2,
@@ -855,11 +978,18 @@ export async function convertToFormat(
       // 使用 marked 将 Markdown 转换为 HTML
       const htmlContent = marked.parse(mdContent) as string;
       
+      // 处理 LaTeX 公式：将 $...$ 和 $$...$$ 转换为 KaTeX span
+      const processedHtml = htmlContent
+        .replace(/\$\$([^$]+)\$\$/g, '<span class="katex-display">$1</span>')
+        .replace(/\$([^$]+)\$/g, '<span class="katex-inline">$1</span>');
+      
       const fullHtml = `
         <!DOCTYPE html>
         <html>
           <head>
             <meta charset="UTF-8">
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+            <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
             <style>
               body {
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
@@ -878,15 +1008,37 @@ export async function convertToFormat(
               code { background: #f5f5f5; padding: 2px 6px; border-radius: 3px; font-family: 'Monaco', monospace; }
               pre { background: #f5f5f5; padding: 16px; border-radius: 8px; overflow-x: auto; }
               blockquote { border-left: 4px solid #667eea; padding-left: 16px; margin-left: 0; color: #666; }
+              .katex-display { display: block; text-align: center; margin: 1em 0; }
             </style>
           </head>
           <body>
-            ${htmlContent}
+            ${processedHtml}
+            <script>
+              // 渲染所有 KaTeX 公式
+              document.querySelectorAll('.katex-inline').forEach(el => {
+                try {
+                  katex.render(el.textContent, el, { throwOnError: false });
+                } catch (e) { console.error(e); }
+              });
+              document.querySelectorAll('.katex-display').forEach(el => {
+                try {
+                  katex.render(el.textContent, el, { throwOnError: false, displayMode: true });
+                } catch (e) { console.error(e); }
+              });
+            </script>
           </body>
         </html>
       `;
       
       await page.setContent(fullHtml, { waitUntil: 'networkidle0' });
+      // 等待 KaTeX 渲染完成
+      await page.waitForFunction(`
+        (() => {
+          const elements = document.querySelectorAll('.katex-inline, .katex-display');
+          return elements.length === 0 || Array.from(elements).every(el => el.querySelector('.katex'));
+        })()
+      `, { timeout: 5000 }).catch(() => {});
+      
       await page.pdf({
         path: filePath,
         format: 'A4',

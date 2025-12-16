@@ -1,6 +1,9 @@
 import React, { useRef, useImperativeHandle, forwardRef } from 'react';
 import { FileText, Loader2, FileCode, File } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 import './WordPreview.css';
 
 export interface WordPreviewHandle {
@@ -174,7 +177,12 @@ const WordPreview = forwardRef<WordPreviewHandle, WordPreviewProps>(({
         ) : content ? (
           <div className="preview-document">
             <div className="document-paper" style={getCSSVariables() as React.CSSProperties}>
-              <ReactMarkdown>{content}</ReactMarkdown>
+              <ReactMarkdown
+                remarkPlugins={[remarkMath]}
+                rehypePlugins={[rehypeKatex]}
+              >
+                {content}
+              </ReactMarkdown>
             </div>
           </div>
         ) : (
