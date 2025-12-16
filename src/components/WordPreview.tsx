@@ -35,6 +35,22 @@ interface WordPreviewProps {
   formatSettings?: FormatSettings;
 }
 
+// 字体名称到 CSS 字体栈的映射
+const fontFamilyMap: Record<string, string> = {
+  '宋体': '"SimSun", "宋体", "STSong", "华文宋体", serif',
+  '黑体': '"SimHei", "黑体", "STHeiti", "华文黑体", sans-serif',
+  '楷体': '"KaiTi", "楷体", "STKaiti", "华文楷体", serif',
+  '仿宋': '"FangSong", "仿宋", "STFangsong", "华文仿宋", serif',
+  '微软雅黑': '"Microsoft YaHei", "微软雅黑", "PingFang SC", "苹方", sans-serif',
+  'Arial': 'Arial, "Helvetica Neue", Helvetica, sans-serif',
+  'Times New Roman': '"Times New Roman", Times, "Georgia", serif',
+};
+
+// 获取完整的 CSS 字体栈
+const getFontStack = (fontName: string): string => {
+  return fontFamilyMap[fontName] || `"${fontName}", sans-serif`;
+};
+
 const WordPreview: React.FC<WordPreviewProps> = ({
   content,
   loading = false,
@@ -46,30 +62,30 @@ const WordPreview: React.FC<WordPreviewProps> = ({
     if (!formatSettings) return {};
     
     return {
-      '--para-font': formatSettings.paragraph.fontFamily,
+      '--para-font': getFontStack(formatSettings.paragraph.fontFamily),
       '--para-size': `${formatSettings.paragraph.fontSize}pt`,
       '--para-line-height': String(formatSettings.paragraph.lineHeight),
       '--para-spacing': `${formatSettings.paragraph.paragraphSpacing}pt`,
       '--para-indent': `${formatSettings.paragraph.firstLineIndent}em`,
-      '--h1-font': formatSettings.heading1.fontFamily,
+      '--h1-font': getFontStack(formatSettings.heading1.fontFamily),
       '--h1-size': `${formatSettings.heading1.fontSize}pt`,
       '--h1-line-height': String(formatSettings.heading1.lineHeight),
       '--h1-align': formatSettings.heading1.alignment,
       '--h1-before': `${formatSettings.heading1.spacingBefore}pt`,
       '--h1-after': `${formatSettings.heading1.spacingAfter}pt`,
-      '--h2-font': formatSettings.heading2.fontFamily,
+      '--h2-font': getFontStack(formatSettings.heading2.fontFamily),
       '--h2-size': `${formatSettings.heading2.fontSize}pt`,
       '--h2-line-height': String(formatSettings.heading2.lineHeight),
       '--h2-align': formatSettings.heading2.alignment,
       '--h2-before': `${formatSettings.heading2.spacingBefore}pt`,
       '--h2-after': `${formatSettings.heading2.spacingAfter}pt`,
-      '--h3-font': formatSettings.heading3.fontFamily,
+      '--h3-font': getFontStack(formatSettings.heading3.fontFamily),
       '--h3-size': `${formatSettings.heading3.fontSize}pt`,
       '--h3-line-height': String(formatSettings.heading3.lineHeight),
       '--h3-align': formatSettings.heading3.alignment,
       '--h3-before': `${formatSettings.heading3.spacingBefore}pt`,
       '--h3-after': `${formatSettings.heading3.spacingAfter}pt`,
-      '--h4-font': formatSettings.heading4.fontFamily,
+      '--h4-font': getFontStack(formatSettings.heading4.fontFamily),
       '--h4-size': `${formatSettings.heading4.fontSize}pt`,
       '--h4-line-height': String(formatSettings.heading4.lineHeight),
       '--h4-align': formatSettings.heading4.alignment,

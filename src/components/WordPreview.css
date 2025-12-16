@@ -103,31 +103,31 @@
 }
 
 .document-paper {
-  /* 默认值 */
-  --para-font: '宋体', 'SimSun', serif;
+  /* 默认值 - 使用完整的字体栈确保跨平台兼容性 */
+  --para-font: "SimSun", "宋体", "STSong", "华文宋体", serif;
   --para-size: 12pt;
   --para-line-height: 1.5;
   --para-spacing: 6pt;
   --para-indent: 2em;
-  --h1-font: '黑体', 'SimHei', sans-serif;
+  --h1-font: "SimHei", "黑体", "STHeiti", "华文黑体", sans-serif;
   --h1-size: 22pt;
   --h1-line-height: 1.5;
   --h1-align: center;
   --h1-before: 12pt;
   --h1-after: 6pt;
-  --h2-font: '黑体', 'SimHei', sans-serif;
+  --h2-font: "SimHei", "黑体", "STHeiti", "华文黑体", sans-serif;
   --h2-size: 16pt;
   --h2-line-height: 1.5;
   --h2-align: left;
   --h2-before: 12pt;
   --h2-after: 6pt;
-  --h3-font: '黑体', 'SimHei', sans-serif;
+  --h3-font: "SimHei", "黑体", "STHeiti", "华文黑体", sans-serif;
   --h3-size: 14pt;
   --h3-line-height: 1.5;
   --h3-align: left;
   --h3-before: 12pt;
   --h3-after: 6pt;
-  --h4-font: '黑体', 'SimHei', sans-serif;
+  --h4-font: "SimHei", "黑体", "STHeiti", "华文黑体", sans-serif;
   --h4-size: 12pt;
   --h4-line-height: 1.5;
   --h4-align: left;
