@@ -1,7 +1,11 @@
-import React from 'react';
+import React, { useRef, useImperativeHandle, forwardRef } from 'react';
 import { FileText, Loader2, FileCode, File } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import './WordPreview.css';
+
+export interface WordPreviewHandle {
+  scrollTo: (scrollPercent: number) => void;
+}
 
 interface ParagraphStyle {
   fontFamily: string;
@@ -33,6 +37,7 @@ interface WordPreviewProps {
   loading?: boolean;
   onSave: (format: 'doc' | 'pdf' | 'md') => void;
   formatSettings?: FormatSettings;
+  onScroll?: (scrollPercent: number) => void;
 }
 
 // 字体名称到 CSS 字体栈的映射
@@ -51,12 +56,40 @@ const getFontStack = (fontName: string): string => {
   return fontFamilyMap[fontName] || `"${fontName}", sans-serif`;
 };
 
-const WordPreview: React.FC<WordPreviewProps> = ({
+const WordPreview = forwardRef<WordPreviewHandle, WordPreviewProps>(({
   content,
   loading = false,
   onSave,
   formatSettings,
-}) => {
+  onScroll,
+}, ref) => {
+  const previewBodyRef = useRef<HTMLDivElement>(null);
+  const isScrollingRef = useRef(false);
+
+  // 暴露滚动方法给父组件
+  useImperativeHandle(ref, () => ({
+    scrollTo: (scrollPercent: number) => {
+      if (previewBodyRef.current && !isScrollingRef.current) {
+        isScrollingRef.current = true;
+        const maxScroll = previewBodyRef.current.scrollHeight - previewBodyRef.current.clientHeight;
+        previewBodyRef.current.scrollTop = maxScroll * scrollPercent;
+        setTimeout(() => {
+          isScrollingRef.current = false;
+        }, 50);
+      }
+    }
+  }));
+
+  // 处理滚动事件
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    const maxScroll = target.scrollHeight - target.clientHeight;
+    const scrollPercent = maxScroll > 0 ? target.scrollTop / maxScroll : 0;
+    
+    if (onScroll && !isScrollingRef.current) {
+      onScroll(scrollPercent);
+    }
+  };
   // 生成 CSS 变量样式
   const getCSSVariables = (): Record<string, string | number> => {
     if (!formatSettings) return {};
@@ -132,7 +165,7 @@ const WordPreview: React.FC<WordPreviewProps> = ({
           )}
         </div>
       </div>
-      <div className="preview-body">
+      <div className="preview-body" ref={previewBodyRef} onScroll={handleScroll}>
         {loading ? (
           <div className="preview-loading">
             <Loader2 className="spin" size={32} />
@@ -154,6 +187,8 @@ const WordPreview: React.FC<WordPreviewProps> = ({
       </div>
     </div>
   );
-};
+});
+
+WordPreview.displayName = 'WordPreview';
 
 export default WordPreview;

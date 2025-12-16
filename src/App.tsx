@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import MarkdownEditor from './components/MarkdownEditor';
-import WordPreview from './components/WordPreview';
+import MarkdownEditor, { MarkdownEditorHandle } from './components/MarkdownEditor';
+import WordPreview, { WordPreviewHandle } from './components/WordPreview';
 import Sidebar from './components/Sidebar';
 import FormatSettingsPanel, { FormatSettings, defaultFormatSettings } from './components/FormatSettings';
 import './App.css';
@@ -91,6 +91,10 @@ function App() {
   const isDragging = useRef<'left' | 'right' | null>(null);
   const startX = useRef<number>(0);
   const startWidths = useRef<{ editor: number; preview: number; sidebar: number }>({ editor: 33, preview: 34, sidebar: 33 });
+
+  // 滚动同步相关
+  const editorRef = useRef<MarkdownEditorHandle>(null);
+  const previewRef = useRef<WordPreviewHandle>(null);
 
   // 处理鼠标按下事件
   const handleMouseDown = useCallback((resizer: 'left' | 'right') => (e: React.MouseEvent) => {
@@ -389,9 +393,11 @@ function App() {
         {/* 左侧: Markdown 编辑器 */}
         <div className="panel editor-panel" style={{ width: `${editorWidth}%` }}>
           <MarkdownEditor
+            ref={editorRef}
             value={result}
             onChange={setResult}
             disabled={loading}
+            onScroll={(scrollPercent) => previewRef.current?.scrollTo(scrollPercent)}
           />
         </div>
 
@@ -404,10 +410,12 @@ function App() {
         {/* 中间: Word 预览 */}
         <div className="panel preview-panel" style={{ width: `${previewWidth}%` }}>
           <WordPreview
+            ref={previewRef}
             content={result}
             loading={loading}
             onSave={handleSave}
             formatSettings={formatSettings}
+            onScroll={(scrollPercent) => editorRef.current?.scrollTo(scrollPercent)}
           />
         </div>
 
