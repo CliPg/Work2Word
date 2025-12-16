@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Upload, Settings, File, Loader2, MessageSquare, ChevronDown, ChevronUp, X, Type } from 'lucide-react';
+import { Send, Upload, Settings, File, Loader2, MessageSquare, ChevronDown, ChevronUp, X, Type, Edit3 } from 'lucide-react';
 import './Sidebar.css';
 
 interface LLMConfigType {
@@ -41,6 +41,11 @@ interface SidebarProps {
   processingStep: string;
   error: string;
   success: string;
+  
+  // 编辑模式
+  isEditMode: boolean;
+  onToggleEditMode: () => void;
+  hasContent: boolean;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -59,15 +64,21 @@ const Sidebar: React.FC<SidebarProps> = ({
   processingStep,
   error,
   success,
+  isEditMode,
+  onToggleEditMode,
+  hasContent,
 }) => {
   const [configExpanded, setConfigExpanded] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const fileName = filePath ? filePath.split('/').pop() || filePath.split('\\').pop() : '';
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // 使用容器的 scrollTop 而不是 scrollIntoView，避免影响页面滚动
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
   }, [messages]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -223,16 +234,37 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
+      {/* 编辑模式切换 */}
+      {hasContent && (
+        <div className="sidebar-section edit-mode-section">
+          <div 
+            className={`section-header clickable edit-mode-toggle ${isEditMode ? 'active' : ''}`}
+            onClick={onToggleEditMode}
+          >
+            <Edit3 size={14} />
+            <span>AI 编辑模式</span>
+            <div className={`toggle-switch ${isEditMode ? 'on' : ''}`}>
+              <div className="toggle-knob" />
+            </div>
+          </div>
+          {isEditMode && (
+            <div className="edit-mode-hint">
+              发送指令让 AI 修改现有内容，可预览并选择接受或拒绝
+            </div>
+          )}
+        </div>
+      )}
+
       {/* 对话区域 */}
       <div className="sidebar-section chat-section">
         <div className="section-header">
           <MessageSquare size={14} />
           <span>对话</span>
         </div>
-        <div className="messages-container">
+        <div className="messages-container" ref={messagesContainerRef}>
           {messages.length === 0 ? (
             <div className="messages-empty">
-              <p>输入作业要求开始处理</p>
+              <p>{isEditMode ? '输入编辑指令修改内容' : '输入作业要求开始处理'}</p>
             </div>
           ) : (
             messages.map((msg) => (
@@ -250,7 +282,6 @@ const Sidebar: React.FC<SidebarProps> = ({
               <span>{processingStep}</span>
             </div>
           )}
-          <div ref={messagesEndRef} />
         </div>
 
         {/* 状态提示 */}
@@ -267,14 +298,14 @@ const Sidebar: React.FC<SidebarProps> = ({
         )}
 
         {/* 输入区域 */}
-        <div className="chat-input-container">
+        <div className={`chat-input-container ${isEditMode ? 'edit-mode' : ''}`}>
           <textarea
             ref={textareaRef}
             className="chat-input"
             value={prompt}
             onChange={(e) => onPromptChange(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="输入作业要求..."
+            placeholder={isEditMode ? '输入编辑指令，如：把第一段改成更正式的语气...' : '输入作业要求...'}
             disabled={loading}
             rows={3}
           />
@@ -282,9 +313,9 @@ const Sidebar: React.FC<SidebarProps> = ({
             className="send-btn"
             onClick={onSendMessage}
             disabled={loading || !prompt.trim()}
-            title="发送"
+            title={isEditMode ? '发送编辑指令' : '发送'}
           >
-            {loading ? <Loader2 size={16} className="spin" /> : <Send size={16} />}
+            {loading ? <Loader2 size={16} className="spin" /> : isEditMode ? <Edit3 size={16} /> : <Send size={16} />}
           </button>
         </div>
       </div>

@@ -14,6 +14,19 @@ interface HomeworkProcessResult {
   finalResult: ProcessStepResult;
 }
 
+// 编辑修改项接口
+interface EditChange {
+  searchText: string;
+  replaceText: string;
+  description: string;
+}
+
+// 编辑内容结果接口
+interface EditContentResult {
+  changes: EditChange[];
+  summary: string;
+}
+
 declare global {
   interface Window {
     electronAPI: {
@@ -25,6 +38,12 @@ declare global {
         result?: HomeworkProcessResult; 
         error?: string 
       }>;
+      // 新增：编辑内容 (Copilot 风格)
+      editContent: (instruction: string, currentContent: string, llmConfig: any) => Promise<{
+        success: boolean;
+        result?: EditContentResult;
+        error?: string
+      }>;
       // 新增：保存调试数据
       saveDebugData: (data: ProcessStepResult, filename: string) => Promise<{ success: boolean; path?: string; error?: string }>;
       convertFile: (mdContent: string, format: 'doc' | 'pdf' | 'md', outputPath?: string, formatSettings?: any) => Promise<{ success: boolean; path?: string; buffer?: Buffer; error?: string }>;
@@ -34,5 +53,5 @@ declare global {
   }
 }
 
-export { ProcessStepResult, HomeworkProcessResult };
+export { ProcessStepResult, HomeworkProcessResult, EditContentResult, EditChange };
 

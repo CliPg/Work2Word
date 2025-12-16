@@ -142,6 +142,45 @@
   opacity: 0.9;
 }
 
+/* 编辑模式指示器 */
+.edit-mode-indicator {
+  color: #667eea !important;
+  font-weight: 500;
+}
+
+/* Diff 预览模态框 */
+.diff-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.diff-modal {
+  width: 90%;
+  max-width: 900px;
+  max-height: 80vh;
+  animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 /* 响应式布局 */
 @media (max-width: 1200px) {
   .editor-panel,
@@ -168,5 +207,10 @@
   .preview-panel,
   .sidebar-panel {
     min-width: 150px;
+  }
+  
+  .diff-modal {
+    width: 95%;
+    max-height: 85vh;
   }
 }

@@ -8,6 +8,10 @@
   min-height: 0;
 }
 
+.markdown-editor.has-changes {
+  border: 2px solid #667eea;
+}
+
 .editor-header {
   display: flex;
   justify-content: space-between;
@@ -31,6 +35,15 @@
 
 .editor-title svg {
   color: #89d185;
+}
+
+.changes-badge {
+  background: #667eea;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
 }
 
 .editor-actions {
@@ -61,11 +74,34 @@
   cursor: not-allowed;
 }
 
+.editor-action-btn.accept-all {
+  background: rgba(35, 134, 54, 0.2);
+  color: #3fb950;
+}
+
+.editor-action-btn.accept-all:hover {
+  background: rgba(35, 134, 54, 0.4);
+}
+
+.editor-action-btn.reject-all {
+  background: rgba(248, 81, 73, 0.2);
+  color: #f85149;
+}
+
+.editor-action-btn.reject-all:hover {
+  background: rgba(248, 81, 73, 0.4);
+}
+
 .editor-body {
   display: flex;
   flex: 1;
   overflow: hidden;
   min-height: 0;
+}
+
+.editor-body.diff-mode {
+  overflow-y: auto;
+  padding: 12px;
 }
 
 .line-numbers {
@@ -111,22 +147,103 @@
   cursor: not-allowed;
 }
 
+/* Diff 模式样式 */
+.diff-content {
+  font-family: 'SF Mono', 'Monaco', 'Menlo', 'Consolas', monospace;
+  font-size: 13px;
+  line-height: 20px;
+  color: #d4d4d4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.segment-normal {
+  color: #d4d4d4;
+}
+
+.segment-change {
+  display: inline;
+}
+
+.change-wrapper {
+  display: inline;
+  position: relative;
+}
+
+.change-deleted {
+  background: rgba(248, 81, 73, 0.3);
+  color: #f85149;
+  text-decoration: line-through;
+  padding: 1px 2px;
+  border-radius: 2px;
+}
+
+.change-added {
+  background: rgba(35, 134, 54, 0.3);
+  color: #3fb950;
+  padding: 1px 2px;
+  border-radius: 2px;
+  margin-left: 4px;
+}
+
+.change-actions {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.change-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.change-btn.accept {
+  background: rgba(35, 134, 54, 0.3);
+  color: #3fb950;
+}
+
+.change-btn.accept:hover {
+  background: rgba(35, 134, 54, 0.6);
+}
+
+.change-btn.reject {
+  background: rgba(248, 81, 73, 0.3);
+  color: #f85149;
+}
+
+.change-btn.reject:hover {
+  background: rgba(248, 81, 73, 0.6);
+}
+
 /* 自定义滚动条 */
 .editor-textarea::-webkit-scrollbar,
-.line-numbers::-webkit-scrollbar {
+.line-numbers::-webkit-scrollbar,
+.editor-body.diff-mode::-webkit-scrollbar {
   width: 10px;
 }
 
 .editor-textarea::-webkit-scrollbar-track,
-.line-numbers::-webkit-scrollbar-track {
+.line-numbers::-webkit-scrollbar-track,
+.editor-body.diff-mode::-webkit-scrollbar-track {
   background: #1e1e1e;
 }
 
-.editor-textarea::-webkit-scrollbar-thumb {
+.editor-textarea::-webkit-scrollbar-thumb,
+.editor-body.diff-mode::-webkit-scrollbar-thumb {
   background: #424242;
   border-radius: 5px;
 }
 
-.editor-textarea::-webkit-scrollbar-thumb:hover {
+.editor-textarea::-webkit-scrollbar-thumb:hover,
+.editor-body.diff-mode::-webkit-scrollbar-thumb:hover {
   background: #4f4f4f;
 }

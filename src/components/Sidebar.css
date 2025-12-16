@@ -351,6 +351,68 @@
   to { transform: rotate(360deg); }
 }
 
+/* 编辑模式样式 */
+.edit-mode-section {
+  background: rgba(102, 126, 234, 0.05);
+}
+
+.edit-mode-toggle {
+  justify-content: flex-start;
+}
+
+.edit-mode-toggle.active {
+  color: #667eea;
+}
+
+.edit-mode-toggle.active svg {
+  color: #667eea;
+}
+
+.toggle-switch {
+  margin-left: auto;
+  width: 36px;
+  height: 20px;
+  background: #4a4a4a;
+  border-radius: 10px;
+  position: relative;
+  transition: background 0.3s ease;
+}
+
+.toggle-switch.on {
+  background: #667eea;
+}
+
+.toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.3s ease;
+}
+
+.toggle-switch.on .toggle-knob {
+  transform: translateX(16px);
+}
+
+.edit-mode-hint {
+  padding: 8px 16px 12px;
+  font-size: 11px;
+  color: #888;
+  line-height: 1.4;
+}
+
+.chat-input-container.edit-mode {
+  border-color: #667eea;
+  box-shadow: 0 0 0 1px rgba(102, 126, 234, 0.3);
+}
+
+.chat-input-container.edit-mode .send-btn {
+  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+}
+
 /* 滚动条样式 */
 .messages-container::-webkit-scrollbar {
   width: 6px;

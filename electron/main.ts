@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import { processFile, convertToFormat } from './fileProcessor';
-import { callLLM, processHomework, ProcessStepResult, HomeworkProcessResult } from './llmService';
+import { callLLM, processHomework, ProcessStepResult, HomeworkProcessResult, editContent } from './llmService';
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -123,6 +123,16 @@ ipcMain.handle('call-llm', async (_, prompt: string, fileContent: string, llmCon
 ipcMain.handle('process-homework-steps', async (_, prompt: string, fileContent: string, llmConfig: any) => {
   try {
     const result = await processHomework(prompt, fileContent, llmConfig);
+    return { success: true, result };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+// 新增：编辑内容接口 (Copilot 风格)
+ipcMain.handle('edit-content', async (_, instruction: string, currentContent: string, llmConfig: any) => {
+  try {
+    const result = await editContent(instruction, currentContent, llmConfig);
     return { success: true, result };
   } catch (error: any) {
     return { success: false, error: error.message };

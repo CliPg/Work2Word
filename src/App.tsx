@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import MarkdownEditor, { MarkdownEditorHandle } from './components/MarkdownEditor';
+import MarkdownEditor, { MarkdownEditorHandle, EditChange } from './components/MarkdownEditor';
 import WordPreview, { WordPreviewHandle } from './components/WordPreview';
 import Sidebar from './components/Sidebar';
 import FormatSettingsPanel, { FormatSettings, defaultFormatSettings } from './components/FormatSettings';
@@ -29,6 +29,12 @@ interface Message {
   role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp: Date;
+}
+
+// 编辑结果接口
+interface EditContentResult {
+  changes: EditChange[];
+  summary: string;
 }
 
 const STORAGE_KEY = 'work2word_config';
@@ -80,6 +86,10 @@ function App() {
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
   const [processingStep, setProcessingStep] = useState<string>('');
+  
+  // 编辑模式状态
+  const [isEditMode, setIsEditMode] = useState<boolean>(false);
+  const [pendingChanges, setPendingChanges] = useState<EditChange[]>([]);
 
   // 面板宽度状态 (百分比)
   const [editorWidth, setEditorWidth] = useState<number>(33);
@@ -275,50 +285,91 @@ function App() {
       setSuccess('');
       setLoading(true);
       
-      setProcessingStep(fileContent ? '正在分析作业格式要求...' : '正在生成内容...');
-      const response = await window.electronAPI.processHomeworkSteps(
-        userMessage.content,
-        fileContent || '',
-        llmConfig
-      );
-      
-      if (response.success && response.result) {
-        const processResult = response.result as HomeworkProcessResult;
-        setResult(processResult.finalResult.content);
-        
-        // 添加助手消息
-        setMessages(prev => [...prev, {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: '处理完成！已生成 Markdown 文档，你可以在左侧编辑器中查看和修改。',
-          timestamp: new Date()
-        }]);
-        
-        // 保存调试数据
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        await window.electronAPI.saveDebugData(
-          processResult.formatTemplate,
-          `format_template_${timestamp}.json`
-        );
-        await window.electronAPI.saveDebugData(
-          processResult.questionsAnswer,
-          `questions_answer_${timestamp}.json`
-        );
-        await window.electronAPI.saveDebugData(
-          processResult.finalResult,
-          `final_result_${timestamp}.json`
+      // 如果是编辑模式且有现有内容，使用编辑 API
+      if (isEditMode && result.trim()) {
+        setProcessingStep('AI 正在分析并生成修改建议...');
+        const response = await window.electronAPI.editContent(
+          userMessage.content,
+          result,
+          llmConfig
         );
         
-        setSuccess('处理完成');
-        setTimeout(() => setSuccess(''), 3000);
+        if (response.success && response.result) {
+          const editResult = response.result as EditContentResult;
+          if (editResult.changes.length > 0) {
+            setPendingChanges(editResult.changes);
+            
+            // 添加助手消息
+            setMessages(prev => [...prev, {
+              id: (Date.now() + 1).toString(),
+              role: 'assistant',
+              content: `${editResult.summary}（共 ${editResult.changes.length} 处修改）`,
+              timestamp: new Date()
+            }]);
+          } else {
+            setMessages(prev => [...prev, {
+              id: (Date.now() + 1).toString(),
+              role: 'assistant',
+              content: '没有找到需要修改的内容',
+              timestamp: new Date()
+            }]);
+          }
+        } else {
+          setError(response.error || '编辑失败');
+          setMessages(prev => [...prev, {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: `编辑失败: ${response.error || '未知错误'}`,
+            timestamp: new Date()
+          }]);
+        }
       } else {
-        setError(response.error || '处理失败');
-        setMessages(prev => [...prev, {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: `处理失败: ${response.error || '未知错误'}`,
-          timestamp: new Date()
-        }]);
+        // 正常的生成模式
+        setProcessingStep(fileContent ? '正在分析作业格式要求...' : '正在生成内容...');
+        const response = await window.electronAPI.processHomeworkSteps(
+          userMessage.content,
+          fileContent || '',
+          llmConfig
+        );
+        
+        if (response.success && response.result) {
+          const processResult = response.result as HomeworkProcessResult;
+          setResult(processResult.finalResult.content);
+          
+          // 添加助手消息
+          setMessages(prev => [...prev, {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: '处理完成！已生成 Markdown 文档，你可以在左侧编辑器中查看和修改。',
+            timestamp: new Date()
+          }]);
+          
+          // 保存调试数据
+          const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+          await window.electronAPI.saveDebugData(
+            processResult.formatTemplate,
+            `format_template_${timestamp}.json`
+          );
+          await window.electronAPI.saveDebugData(
+            processResult.questionsAnswer,
+            `questions_answer_${timestamp}.json`
+          );
+          await window.electronAPI.saveDebugData(
+            processResult.finalResult,
+            `final_result_${timestamp}.json`
+          );
+          
+          setSuccess('处理完成');
+          setTimeout(() => setSuccess(''), 3000);
+        } else {
+          setError(response.error || '处理失败');
+          setMessages(prev => [...prev, {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: `处理失败: ${response.error || '未知错误'}`,
+            timestamp: new Date()
+          }]);
+        }
       }
     } catch (err: any) {
       console.error('处理错误:', err);
@@ -327,6 +378,52 @@ function App() {
       setLoading(false);
       setProcessingStep('');
     }
+  };
+
+  // 接受单个修改
+  const handleAcceptChange = (index: number) => {
+    const change = pendingChanges[index];
+    if (change) {
+      // 应用修改
+      const newResult = result.replace(change.searchText, change.replaceText);
+      setResult(newResult);
+      // 移除已处理的修改
+      setPendingChanges(prev => prev.filter((_, i) => i !== index));
+    }
+  };
+
+  // 拒绝单个修改
+  const handleRejectChange = (index: number) => {
+    setPendingChanges(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // 接受所有修改
+  const handleAcceptAllChanges = () => {
+    let newResult = result;
+    for (const change of pendingChanges) {
+      newResult = newResult.replace(change.searchText, change.replaceText);
+    }
+    setResult(newResult);
+    setPendingChanges([]);
+    setMessages(prev => [...prev, {
+      id: Date.now().toString(),
+      role: 'system',
+      content: '已接受所有修改',
+      timestamp: new Date()
+    }]);
+    setSuccess('已应用所有修改');
+    setTimeout(() => setSuccess(''), 3000);
+  };
+
+  // 拒绝所有修改
+  const handleRejectAllChanges = () => {
+    setPendingChanges([]);
+    setMessages(prev => [...prev, {
+      id: Date.now().toString(),
+      role: 'system',
+      content: '已放弃所有修改',
+      timestamp: new Date()
+    }]);
   };
 
   const handleSave = async (format: 'doc' | 'pdf' | 'md') => {
@@ -393,6 +490,11 @@ function App() {
             onChange={setResult}
             disabled={loading}
             onScroll={(scrollPercent) => previewRef.current?.scrollTo(scrollPercent)}
+            pendingChanges={pendingChanges}
+            onAcceptChange={handleAcceptChange}
+            onRejectChange={handleRejectChange}
+            onAcceptAll={handleAcceptAllChanges}
+            onRejectAll={handleRejectAllChanges}
           />
         </div>
 
@@ -441,6 +543,9 @@ function App() {
             processingStep={processingStep}
             error={error}
             success={success}
+            isEditMode={isEditMode}
+            onToggleEditMode={() => setIsEditMode(!isEditMode)}
+            hasContent={!!result.trim()}
           />
         </div>
       </div>
@@ -459,6 +564,9 @@ function App() {
           <span className="status-item">
             {filePath ? `📄 ${filePath.split('/').pop()}` : '未选择文件'}
           </span>
+          {isEditMode && (
+            <span className="status-item edit-mode-indicator">✏️ 编辑模式</span>
+          )}
         </div>
         <div className="status-right">
           <span className="status-item">{llmConfig.provider}</span>

@@ -416,3 +416,90 @@ async function callCustom(prompt: string, config: LLMConfig): Promise<string> {
   }
 }
 
+// 编辑现有内容 - Copilot 风格
+// 编辑修改项接口
+export interface EditChange {
+  searchText: string;      // 要替换的原文本
+  replaceText: string;     // 替换后的新文本
+  description: string;     // 这个修改的简要描述
+}
+
+export interface EditContentResult {
+  changes: EditChange[];
+  summary: string;         // 总体修改摘要
+}
+
+export async function editContent(
+  instruction: string,
+  currentContent: string,
+  config: LLMConfig
+): Promise<EditContentResult> {
+  if (!instruction || !instruction.trim()) {
+    throw new Error('编辑指令不能为空');
+  }
+
+  if (!currentContent || !currentContent.trim()) {
+    throw new Error('当前内容不能为空');
+  }
+
+  const editPrompt = `你是一个专业的文档编辑助手。请根据用户的编辑指令，找出需要修改的部分。
+
+【当前文档内容】
+${currentContent}
+
+【用户编辑指令】
+${instruction}
+
+【任务要求】
+分析文档，找出需要修改的具体部分，以 JSON 格式返回修改列表。
+
+【输出格式】
+请严格按照以下 JSON 格式输出，不要有其他内容：
+\`\`\`json
+{
+  "changes": [
+    {
+      "searchText": "要被替换的原始文本（必须是文档中存在的精确文本）",
+      "replaceText": "替换后的新文本",
+      "description": "这个修改的简要说明"
+    }
+  ],
+  "summary": "总体修改摘要（一句话）"
+}
+\`\`\`
+
+【重要规则】
+1. searchText 必须是文档中存在的精确文本，可以是一行或多行
+2. 每个修改应该是独立的，不要重叠
+3. 只返回需要修改的部分，不需要返回未改变的内容
+4. 如果没有需要修改的地方，返回空的 changes 数组`;
+
+  const result = await callLLMInternal(editPrompt, config);
+  
+  // 解析 JSON 结果
+  try {
+    // 尝试提取 JSON
+    let jsonStr = result;
+    const jsonMatch = result.match(/```json\s*([\s\S]*?)\s*```/);
+    if (jsonMatch) {
+      jsonStr = jsonMatch[1];
+    } else {
+      // 尝试直接解析
+      const startIdx = result.indexOf('{');
+      const endIdx = result.lastIndexOf('}');
+      if (startIdx !== -1 && endIdx !== -1) {
+        jsonStr = result.substring(startIdx, endIdx + 1);
+      }
+    }
+    
+    const parsed = JSON.parse(jsonStr);
+    return {
+      changes: parsed.changes || [],
+      summary: parsed.summary || '已完成编辑'
+    };
+  } catch (e) {
+    console.error('解析编辑结果失败:', e, result);
+    throw new Error('AI 返回的格式不正确，请重试');
+  }
+}
+
