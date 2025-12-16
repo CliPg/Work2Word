@@ -204,16 +204,24 @@
 
 .document-paper ul,
 .document-paper ol {
+  font-family: var(--para-font);
+  font-size: var(--para-size);
+  line-height: var(--para-line-height);
   margin: 12px 0;
   padding-left: 2em;
 }
 
 .document-paper li {
+  font-family: var(--para-font);
+  font-size: var(--para-size);
+  line-height: var(--para-line-height);
   margin: 6px 0;
   text-align: justify;
 }
 
 .document-paper blockquote {
+  font-family: var(--para-font);
+  font-size: var(--para-size);
   margin: 16px 0;
   padding: 12px 20px;
   border-left: 4px solid #667eea;
