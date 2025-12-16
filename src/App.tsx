@@ -425,6 +425,10 @@ function App() {
           <Sidebar
             filePath={filePath}
             onFileSelect={handleFileSelect}
+            onFileRemove={() => {
+              setFilePath('');
+              setFileContent('');
+            }}
             fileLoading={fileLoading}
             prompt={prompt}
             onPromptChange={setPrompt}

@@ -20,6 +20,7 @@ interface SidebarProps {
   // 文件上传
   filePath: string;
   onFileSelect: () => void;
+  onFileRemove: () => void;
   fileLoading: boolean;
   
   // 对话
@@ -45,6 +46,7 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({
   filePath,
   onFileSelect,
+  onFileRemove,
   fileLoading,
   prompt,
   onPromptChange,
@@ -110,15 +112,28 @@ const Sidebar: React.FC<SidebarProps> = ({
             <>
               <File size={16} />
               <span className="file-name" title={fileName}>{fileName}</span>
-              <button 
-                className="change-file-btn"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onFileSelect();
-                }}
-              >
-                更换
-              </button>
+              <div className="file-actions">
+                <button 
+                  className="change-file-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onFileSelect();
+                  }}
+                  title="更换文件"
+                >
+                  更换
+                </button>
+                <button 
+                  className="remove-file-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onFileRemove();
+                  }}
+                  title="删除文件"
+                >
+                  <X size={14} />
+                </button>
+              </div>
             </>
           ) : (
             <>
@@ -266,8 +281,8 @@ const Sidebar: React.FC<SidebarProps> = ({
           <button
             className="send-btn"
             onClick={onSendMessage}
-            disabled={loading || !prompt.trim() || !filePath}
-            title={!filePath ? '请先上传文件' : '发送'}
+            disabled={loading || !prompt.trim()}
+            title="发送"
           >
             {loading ? <Loader2 size={16} className="spin" /> : <Send size={16} />}
           </button>
