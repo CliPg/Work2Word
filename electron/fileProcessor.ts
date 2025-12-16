@@ -193,17 +193,15 @@ function parseInlineTokens(tokens: any[], baseConfig: Partial<TextRunConfig> = {
     const tokenType = token.type as string;
     
     switch (tokenType) {
-      case 'text':
-        runs.push(new TextRun({
-          text: token.text || '',
-          font: baseConfig.font || { name: paraStyle.fontFamily || defaultStyles.fontFamily },
-          size: baseConfig.size || (paraStyle.fontSize || defaultStyles.fontSize) * 2,
-          bold: baseConfig.bold,
-          italics: baseConfig.italics,
-          strike: baseConfig.strike,
-          color: baseConfig.color,
-        }));
+      case 'text': {
+        // 使用 parseTextWithFormat 处理文本，以支持 LaTeX 公式
+        const textContent = token.text || '';
+        if (textContent) {
+          const textRuns = parseTextWithFormat(textContent, formatSettings, baseConfig);
+          runs.push(...textRuns);
+        }
         break;
+      }
         
       case 'strong': {
         // 获取加粗文本内容
@@ -296,29 +294,14 @@ function parseInlineTokens(tokens: any[], baseConfig: Partial<TextRunConfig> = {
         runs.push(new TextRun({ break: 1 }));
         break;
         
-      default:
-        // 对于其他类型，尝试提取文本
-        if (token.text) {
-          runs.push(new TextRun({
-            text: token.text,
-            font: baseConfig.font || { name: paraStyle.fontFamily || defaultStyles.fontFamily },
-            size: baseConfig.size || (paraStyle.fontSize || defaultStyles.fontSize) * 2,
-            bold: baseConfig.bold,
-            italics: baseConfig.italics,
-            strike: baseConfig.strike,
-            color: baseConfig.color,
-          }));
-        } else if (token.raw) {
-          runs.push(new TextRun({
-            text: token.raw,
-            font: baseConfig.font || { name: paraStyle.fontFamily || defaultStyles.fontFamily },
-            size: baseConfig.size || (paraStyle.fontSize || defaultStyles.fontSize) * 2,
-            bold: baseConfig.bold,
-            italics: baseConfig.italics,
-            strike: baseConfig.strike,
-            color: baseConfig.color,
-          }));
+      default: {
+        // 对于其他类型，尝试提取文本并使用 parseTextWithFormat 处理
+        const textContent = token.text || token.raw || '';
+        if (textContent) {
+          const textRuns = parseTextWithFormat(textContent, formatSettings, baseConfig);
+          runs.push(...textRuns);
         }
+      }
     }
   }
   
@@ -485,9 +468,11 @@ function parseTextWithFormat(text: string, formatSettings?: FormatSettings, base
   const runs: TextRun[] = [];
   const paraStyle = formatSettings?.paragraph || defaultStyles;
   
-  // 匹配 **加粗**、`代码` 或 $公式$（包括 $$公式$$）
-  // 注意顺序：先匹配 $$ ，再匹配 $
-  const regex = /(\$\$([^$]+)\$\$)|(\$([^$]+)\$)|(`+)([^`]+)\5|\*\*(.+?)\*\*/g;
+  // 分步处理：先处理公式，再处理其他格式
+  // 使用更健壮的正则表达式来匹配 LaTeX 公式
+  // $$...$$：块级公式（非贪婪匹配）
+  // $...$：行内公式（排除连续的$$，并允许包含任意字符）
+  const regex = /(\$\$(.+?)\$\$)|(\$(?!\$)(.+?)(?<!\$)\$)|(`+)([^`]+)\5|\*\*(.+?)\*\*/gs;
   let lastIndex = 0;
   let match;
   
@@ -715,21 +700,15 @@ function createListItemParagraphs(token: any, level: number = 0, formatSettings?
         } else if (innerToken.type === 'paragraph' && innerToken.tokens) {
           runs = runs.concat(parseInlineTokens(innerToken.tokens, {}, formatSettings));
         } else if (innerToken.text) {
-          runs.push(new TextRun({
-            text: innerToken.text,
-            font: { name: paraStyle.fontFamily || defaultStyles.fontFamily },
-            size: (paraStyle.fontSize || defaultStyles.fontSize) * 2,
-          }));
+          // 使用 parseTextWithFormat 处理文本以支持公式
+          runs = runs.concat(parseTextWithFormat(innerToken.text, formatSettings));
         }
       }
     }
     
-    if (runs.length === 0) {
-      runs = [new TextRun({
-        text: item.text || '',
-        font: { name: paraStyle.fontFamily || defaultStyles.fontFamily },
-        size: (paraStyle.fontSize || defaultStyles.fontSize) * 2,
-      })];
+    if (runs.length === 0 && item.text) {
+      // 使用 parseTextWithFormat 处理文本以支持公式
+      runs = parseTextWithFormat(item.text, formatSettings);
     }
     
     // 添加列表前缀
