@@ -5,6 +5,7 @@
   background: #252526;
   color: #cccccc;
   overflow: hidden;
+  min-height: 0; /* 关键：防止 flex 子元素溢出 */
 }
 
 .sidebar-header {
@@ -200,12 +201,14 @@
   flex-direction: column;
   overflow: hidden;
   border-bottom: none;
+  min-height: 0; /* 关键：允许 flex 子元素收缩 */
 }
 
 .messages-container {
   flex: 1;
   overflow-y: auto;
   padding: 12px;
+  min-height: 0; /* 关键：允许滚动容器正确计算高度 */
 }
 
 .messages-empty {

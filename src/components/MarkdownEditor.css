@@ -5,6 +5,7 @@
   background: #1e1e1e;
   border-radius: 0;
   overflow: hidden;
+  min-height: 0;
 }
 
 .editor-header {
@@ -14,7 +15,9 @@
   padding: 8px 12px;
   background: #252526;
   border-bottom: 1px solid #3c3c3c;
+  min-height: 35px;
   max-height: 35px;
+  flex-shrink: 0;
 }
 
 .editor-title {
@@ -62,6 +65,7 @@
   display: flex;
   flex: 1;
   overflow: hidden;
+  min-height: 0;
 }
 
 .line-numbers {
@@ -73,7 +77,7 @@
   min-width: 40px;
   text-align: right;
   user-select: none;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .line-number {
