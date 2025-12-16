@@ -246,12 +246,7 @@ function App() {
 
   const handleSendMessage = async () => {
     if (!prompt.trim()) {
-      setError('请输入作业要求');
-      return;
-    }
-
-    if (!fileContent) {
-      setError('请先上传作业附件');
+      setError('请输入内容要求');
       return;
     }
 
@@ -280,10 +275,10 @@ function App() {
       setSuccess('');
       setLoading(true);
       
-      setProcessingStep('正在分析作业格式要求...');
+      setProcessingStep(fileContent ? '正在分析作业格式要求...' : '正在生成内容...');
       const response = await window.electronAPI.processHomeworkSteps(
         userMessage.content,
-        fileContent,
+        fileContent || '',
         llmConfig
       );
       
@@ -295,7 +290,7 @@ function App() {
         setMessages(prev => [...prev, {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: '作业处理完成！已生成 Markdown 文档，你可以在左侧编辑器中查看和修改。',
+          content: '处理完成！已生成 Markdown 文档，你可以在左侧编辑器中查看和修改。',
           timestamp: new Date()
         }]);
         

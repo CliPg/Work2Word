@@ -175,6 +175,65 @@ ${userPrompt}
   };
 }
 
+// 直接生成模式：无需上传文件，直接根据 prompt 生成内容
+async function directGeneration(
+  prompt: string,
+  config: LLMConfig,
+  onStepComplete?: (step: ProcessStepResult) => void
+): Promise<HomeworkProcessResult> {
+  const directPrompt = `你是一个专业的文档生成助手。请根据用户的需求，生成高质量的内容。
+
+【用户需求】
+${prompt}
+
+【任务要求】
+请根据用户的需求，生成完整、专业、格式规范的内容。要求：
+1. 内容准确、专业、有深度
+2. 使用规范的 Markdown 语法
+3. 结构清晰，层次分明
+4. 适当使用标题、列表、代码块等格式化元素
+5. 如涉及数学公式，使用 LaTeX 语法（如 $E=mc^2$）
+6. 如涉及代码，使用正确的代码块标记
+
+【输出格式】
+直接输出完整的 Markdown 文档内容，不需要代码块包裹。`;
+
+  const result = await callLLMInternal(directPrompt, config);
+  
+  const timestamp = new Date().toISOString();
+  
+  // 创建一个简化的结果结构
+  const formatTemplate: ProcessStepResult = {
+    step: 'format',
+    content: JSON.stringify({ mode: 'direct', prompt: prompt }),
+    timestamp
+  };
+  
+  const questionsAnswer: ProcessStepResult = {
+    step: 'questions',
+    content: JSON.stringify({ mode: 'direct', generated: true }),
+    timestamp
+  };
+  
+  const finalResult: ProcessStepResult = {
+    step: 'final',
+    content: result,
+    timestamp
+  };
+  
+  if (onStepComplete) {
+    onStepComplete(formatTemplate);
+    onStepComplete(questionsAnswer);
+    onStepComplete(finalResult);
+  }
+  
+  return {
+    formatTemplate,
+    questionsAnswer,
+    finalResult
+  };
+}
+
 // 完整的作业处理流程
 export async function processHomework(
   prompt: string,
@@ -183,7 +242,12 @@ export async function processHomework(
   onStepComplete?: (step: ProcessStepResult) => void
 ): Promise<HomeworkProcessResult> {
   if (!prompt || !prompt.trim()) {
-    throw new Error('作业要求不能为空');
+    throw new Error('请求内容不能为空');
+  }
+
+  // 如果没有文件内容，使用简化的直接生成模式
+  if (!fileContent || !fileContent.trim()) {
+    return await directGeneration(prompt, config, onStepComplete);
   }
 
   // 步骤1：提取格式模版
