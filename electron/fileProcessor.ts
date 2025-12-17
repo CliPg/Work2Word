@@ -2,8 +2,11 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import mammoth from 'mammoth';
 import pdfParse from 'pdf-parse';
+import WordExtractor from 'word-extractor';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle } from 'docx';
 import { marked } from 'marked';
+
+const wordExtractor = new WordExtractor();
 
 export async function processFile(filePath: string): Promise<string> {
   try {
@@ -19,6 +22,7 @@ export async function processFile(filePath: string): Promise<string> {
 
     switch (ext) {
       case '.doc':
+        return await processDoc(filePath);
       case '.docx':
         return await processDocx(buffer);
       case '.pdf':
@@ -37,6 +41,19 @@ export async function processFile(filePath: string): Promise<string> {
       throw new Error('文件不存在');
     }
     throw error;
+  }
+}
+
+async function processDoc(filePath: string): Promise<string> {
+  try {
+    const extracted = await wordExtractor.extract(filePath);
+    const text = extracted.getBody() || '';
+    if (!text.trim()) {
+      throw new Error('文档内容为空或无法提取文本');
+    }
+    return text;
+  } catch (error: any) {
+    throw new Error(`处理 Word 文档(.doc)失败: ${error.message || error}`);
   }
 }
 

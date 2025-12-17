@@ -16,6 +16,7 @@
   background: #252526;
   border-bottom: 1px solid #3c3c3c;
   min-height: 35px;
+  max-height: 35px;
 }
 
 .sidebar-title {
@@ -57,11 +58,6 @@
   flex-direction: column;
   overflow: hidden;
   min-height: 0;
-}
-  flex-direction: column;
-  overflow: hidden;
-  border-bottom: none;
-  min-height: 0; /* 关键：允许 flex 子元素收缩 */
 }
 
 .messages-container {
