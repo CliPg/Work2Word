@@ -91,6 +91,9 @@ function App() {
   const [isEditMode, setIsEditMode] = useState<boolean>(false);
   const [pendingChanges, setPendingChanges] = useState<EditChange[]>([]);
 
+  // 侧边栏可见性
+  const [sidebarVisible, setSidebarVisible] = useState<boolean>(true);
+
   // 面板宽度状态 (百分比)
   const [editorWidth, setEditorWidth] = useState<number>(33);
   const [previewWidth, setPreviewWidth] = useState<number>(34);
@@ -469,6 +472,10 @@ function App() {
     }
   };
 
+  // 计算实际显示宽度
+  const actualEditorWidth = sidebarVisible ? editorWidth : editorWidth * 100 / (editorWidth + previewWidth);
+  const actualPreviewWidth = sidebarVisible ? previewWidth : previewWidth * 100 / (editorWidth + previewWidth);
+
   return (
     <div className="app-container">
       {/* 活动栏 */}
@@ -478,12 +485,21 @@ function App() {
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/>
           </svg>
         </div>
+        <div 
+          className={`activity-icon ${sidebarVisible ? 'active' : ''}`} 
+          title={sidebarVisible ? '隐藏侧边栏' : '显示侧边栏'}
+          onClick={() => setSidebarVisible(!sidebarVisible)}
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3 3h18v18H3V3zm16 16V5H5v14h14zM7 7h4v4H7V7zm0 6h4v4H7v-4zm6-6h4v2h-4V7zm0 4h4v2h-4v-2zm0 4h4v2h-4v-2z"/>
+          </svg>
+        </div>
       </div>
 
       {/* 主内容区 */}
       <div className="main-content" ref={containerRef}>
         {/* 左侧: Markdown 编辑器 */}
-        <div className="panel editor-panel" style={{ width: `${editorWidth}%` }}>
+        <div className="panel editor-panel" style={{ width: `${actualEditorWidth}%` }}>
           <MarkdownEditor
             ref={editorRef}
             value={result}
@@ -505,7 +521,7 @@ function App() {
         />
 
         {/* 中间: Word 预览 */}
-        <div className="panel preview-panel" style={{ width: `${previewWidth}%` }}>
+        <div className="panel preview-panel" style={{ width: `${actualPreviewWidth}%` }}>
           <WordPreview
             ref={previewRef}
             content={result}
@@ -517,37 +533,41 @@ function App() {
         </div>
 
         {/* 分隔条 */}
-        <div 
-          className="panel-resizer" 
-          onMouseDown={handleMouseDown('right')}
-        />
+        {sidebarVisible && (
+          <div 
+            className="panel-resizer" 
+            onMouseDown={handleMouseDown('right')}
+          />
+        )}
 
         {/* 右侧: 侧边栏 */}
-        <div className="panel sidebar-panel" style={{ width: `${sidebarWidth}%` }}>
-          <Sidebar
-            filePath={filePath}
-            onFileSelect={handleFileSelect}
-            onFileRemove={() => {
-              setFilePath('');
-              setFileContent('');
-            }}
-            fileLoading={fileLoading}
-            prompt={prompt}
-            onPromptChange={setPrompt}
-            onSendMessage={handleSendMessage}
-            messages={messages}
-            llmConfig={llmConfig}
-            onConfigChange={setLLMConfig}
-            onOpenFormatSettings={() => setFormatPanelVisible(true)}
-            loading={loading}
-            processingStep={processingStep}
-            error={error}
-            success={success}
-            isEditMode={isEditMode}
-            onToggleEditMode={() => setIsEditMode(!isEditMode)}
-            hasContent={!!result.trim()}
-          />
-        </div>
+        {sidebarVisible && (
+          <div className="panel sidebar-panel" style={{ width: `${sidebarWidth}%` }}>
+            <Sidebar
+              filePath={filePath}
+              onFileSelect={handleFileSelect}
+              onFileRemove={() => {
+                setFilePath('');
+                setFileContent('');
+              }}
+              fileLoading={fileLoading}
+              prompt={prompt}
+              onPromptChange={setPrompt}
+              onSendMessage={handleSendMessage}
+              messages={messages}
+              llmConfig={llmConfig}
+              onConfigChange={setLLMConfig}
+              onOpenFormatSettings={() => setFormatPanelVisible(true)}
+              loading={loading}
+              processingStep={processingStep}
+              error={error}
+              success={success}
+              isEditMode={isEditMode}
+              onToggleEditMode={() => setIsEditMode(!isEditMode)}
+              hasContent={!!result.trim()}
+            />
+          </div>
+        )}
       </div>
 
       {/* 排版设置面板 */}
