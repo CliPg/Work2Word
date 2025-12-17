@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Upload, Settings, File, Loader2, MessageSquare, ChevronDown, ChevronUp, X, Type, Edit3 } from 'lucide-react';
+import { Send, File, Loader2, MessageSquare, ChevronDown, X, Type, Edit3, Paperclip, Bot } from 'lucide-react';
 import './Sidebar.css';
 
 interface LLMConfigType {
@@ -68,9 +68,10 @@ const Sidebar: React.FC<SidebarProps> = ({
   onToggleEditMode,
   hasContent,
 }) => {
-  const [configExpanded, setConfigExpanded] = useState(false);
+  const [modelSelectorOpen, setModelSelectorOpen] = useState(false);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const modelSelectorRef = useRef<HTMLDivElement>(null);
 
   const fileName = filePath ? filePath.split('/').pop() || filePath.split('\\').pop() : '';
 
@@ -80,6 +81,21 @@ const Sidebar: React.FC<SidebarProps> = ({
       messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // 点击外部关闭模型选择器
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (modelSelectorRef.current && !modelSelectorRef.current.contains(e.target as Node)) {
+        setModelSelectorOpen(false);
+      }
+    };
+    if (modelSelectorOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [modelSelectorOpen]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -94,6 +110,12 @@ const Sidebar: React.FC<SidebarProps> = ({
     onConfigChange({ ...llmConfig, ...updates });
   };
 
+  const getModelDisplayName = () => {
+    if (llmConfig.provider === 'qwen') return `通义 · ${llmConfig.model}`;
+    if (llmConfig.provider === 'openai') return `OpenAI · ${llmConfig.model}`;
+    return llmConfig.model || '自定义模型';
+  };
+
   return (
     <div className="sidebar">
       {/* 标题栏 */}
@@ -102,169 +124,23 @@ const Sidebar: React.FC<SidebarProps> = ({
           <MessageSquare size={16} />
           <span>Work2Word</span>
         </div>
-      </div>
-
-      {/* 文件上传区域 */}
-      <div className="sidebar-section file-section">
-        <div className="section-header">
-          <Upload size={14} />
-          <span>作业附件</span>
-        </div>
-        <div 
-          className={`file-upload-area ${filePath ? 'has-file' : ''}`}
-          onClick={onFileSelect}
-        >
-          {fileLoading ? (
-            <>
-              <Loader2 size={16} className="spin" />
-              <span>处理中...</span>
-            </>
-          ) : filePath ? (
-            <>
-              <File size={16} />
-              <span className="file-name" title={fileName}>{fileName}</span>
-              <div className="file-actions">
-                <button 
-                  className="change-file-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onFileSelect();
-                  }}
-                  title="更换文件"
-                >
-                  更换
-                </button>
-                <button 
-                  className="remove-file-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onFileRemove();
-                  }}
-                  title="删除文件"
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <Upload size={16} />
-              <span>点击上传文件</span>
-            </>
-          )}
-        </div>
-        <div className="file-hint">支持 DOC、DOCX、PDF、TXT</div>
-      </div>
-
-      {/* LLM 配置区域 */}
-      <div className="sidebar-section config-section">
-        <div 
-          className="section-header clickable"
-          onClick={() => setConfigExpanded(!configExpanded)}
-        >
-          <Settings size={14} />
-          <span>模型配置</span>
-          {configExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-        </div>
-        {configExpanded && (
-          <div className="config-content">
-            <div className="config-field">
-              <label>提供商</label>
-              <select
-                value={llmConfig.provider}
-                onChange={(e) => {
-                  const provider = e.target.value as 'qwen' | 'openai' | 'custom';
-                  updateConfig({
-                    provider,
-                    model: provider === 'qwen' ? 'qwen-turbo' : provider === 'openai' ? 'gpt-3.5-turbo' : '',
-                  });
-                }}
-                disabled={loading}
-              >
-                <option value="qwen">通义千问</option>
-                <option value="openai">OpenAI</option>
-                <option value="custom">自定义</option>
-              </select>
-            </div>
-            <div className="config-field">
-              <label>API Key</label>
-              <input
-                type="password"
-                value={llmConfig.apiKey}
-                onChange={(e) => updateConfig({ apiKey: e.target.value })}
-                disabled={loading}
-                placeholder="输入 API Key"
-              />
-            </div>
-            {llmConfig.provider === 'custom' && (
-              <div className="config-field">
-                <label>API URL</label>
-                <input
-                  type="text"
-                  value={llmConfig.apiUrl}
-                  onChange={(e) => updateConfig({ apiUrl: e.target.value })}
-                  disabled={loading}
-                  placeholder="API 地址"
-                />
-              </div>
-            )}
-            <div className="config-field">
-              <label>模型</label>
-              <input
-                type="text"
-                value={llmConfig.model}
-                onChange={(e) => updateConfig({ model: e.target.value })}
-                disabled={loading}
-                placeholder="模型名称"
-              />
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* 排版设置按钮 */}
-      <div className="sidebar-section format-section">
-        <div 
-          className="section-header clickable"
+        <button 
+          className="header-action-btn"
           onClick={onOpenFormatSettings}
+          title="排版格式"
         >
           <Type size={14} />
-          <span>排版格式</span>
-          <ChevronDown size={14} style={{ transform: 'rotate(-90deg)' }} />
-        </div>
+        </button>
       </div>
 
-      {/* 编辑模式切换 */}
-      {hasContent && (
-        <div className="sidebar-section edit-mode-section">
-          <div 
-            className={`section-header clickable edit-mode-toggle ${isEditMode ? 'active' : ''}`}
-            onClick={onToggleEditMode}
-          >
-            <Edit3 size={14} />
-            <span>AI 编辑模式</span>
-            <div className={`toggle-switch ${isEditMode ? 'on' : ''}`}>
-              <div className="toggle-knob" />
-            </div>
-          </div>
-          {isEditMode && (
-            <div className="edit-mode-hint">
-              发送指令让 AI 修改现有内容，可预览并选择接受或拒绝
-            </div>
-          )}
-        </div>
-      )}
-
       {/* 对话区域 */}
-      <div className="sidebar-section chat-section">
-        <div className="section-header">
-          <MessageSquare size={14} />
-          <span>对话</span>
-        </div>
+      <div className="chat-area">
         <div className="messages-container" ref={messagesContainerRef}>
           {messages.length === 0 ? (
             <div className="messages-empty">
+              <MessageSquare size={32} />
               <p>{isEditMode ? '输入编辑指令修改内容' : '输入作业要求开始处理'}</p>
+              <span className="hint-text">可以附加文件或直接开始对话</span>
             </div>
           ) : (
             messages.map((msg) => (
@@ -296,9 +172,31 @@ const Sidebar: React.FC<SidebarProps> = ({
             <span>{success}</span>
           </div>
         )}
+      </div>
 
-        {/* 输入区域 */}
-        <div className={`chat-input-container ${isEditMode ? 'edit-mode' : ''}`}>
+      {/* VSCode 风格的统一输入区域 */}
+      <div className={`unified-input-container ${isEditMode ? 'edit-mode' : ''}`}>
+        {/* 附件预览 */}
+        {filePath && (
+          <div className="attached-file">
+            <File size={14} />
+            <span className="attached-file-name" title={fileName}>{fileName}</span>
+            {fileLoading ? (
+              <Loader2 size={14} className="spin" />
+            ) : (
+              <button 
+                className="remove-attached-btn"
+                onClick={onFileRemove}
+                title="移除文件"
+              >
+                <X size={12} />
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* 输入框 */}
+        <div className="input-box">
           <textarea
             ref={textareaRef}
             className="chat-input"
@@ -307,16 +205,120 @@ const Sidebar: React.FC<SidebarProps> = ({
             onKeyDown={handleKeyDown}
             placeholder={isEditMode ? '输入编辑指令，如：把第一段改成更正式的语气...' : '输入作业要求...'}
             disabled={loading}
-            rows={3}
+            rows={2}
           />
-          <button
-            className="send-btn"
-            onClick={onSendMessage}
-            disabled={loading || !prompt.trim()}
-            title={isEditMode ? '发送编辑指令' : '发送'}
-          >
-            {loading ? <Loader2 size={16} className="spin" /> : isEditMode ? <Edit3 size={16} /> : <Send size={16} />}
-          </button>
+        </div>
+
+        {/* 工具栏 */}
+        <div className="input-toolbar">
+          <div className="toolbar-left">
+            {/* 附件按钮 */}
+            <button
+              className="toolbar-btn"
+              onClick={onFileSelect}
+              disabled={loading || fileLoading}
+              title="附加文件 (DOC, DOCX, PDF, TXT)"
+            >
+              <Paperclip size={16} />
+            </button>
+
+            {/* 模型选择器 */}
+            <div className="model-selector-wrapper" ref={modelSelectorRef}>
+              <button
+                className="toolbar-btn model-btn"
+                onClick={() => setModelSelectorOpen(!modelSelectorOpen)}
+                disabled={loading}
+                title="选择模型"
+              >
+                <Bot size={16} />
+                <span className="model-name">{getModelDisplayName()}</span>
+                <ChevronDown size={12} className={modelSelectorOpen ? 'rotate' : ''} />
+              </button>
+
+              {modelSelectorOpen && (
+                <div className="model-dropdown">
+                  <div className="dropdown-section">
+                    <div className="dropdown-label">提供商</div>
+                    <div className="dropdown-options">
+                      {(['qwen', 'openai', 'custom'] as const).map(provider => (
+                        <button
+                          key={provider}
+                          className={`dropdown-option ${llmConfig.provider === provider ? 'active' : ''}`}
+                          onClick={() => {
+                            updateConfig({
+                              provider,
+                              model: provider === 'qwen' ? 'qwen-turbo' : provider === 'openai' ? 'gpt-3.5-turbo' : llmConfig.model,
+                            });
+                          }}
+                        >
+                          {provider === 'qwen' ? '通义千问' : provider === 'openai' ? 'OpenAI' : '自定义'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="dropdown-section">
+                    <div className="dropdown-label">模型</div>
+                    <input
+                      type="text"
+                      className="dropdown-input"
+                      value={llmConfig.model}
+                      onChange={(e) => updateConfig({ model: e.target.value })}
+                      placeholder="模型名称"
+                    />
+                  </div>
+                  <div className="dropdown-section">
+                    <div className="dropdown-label">API Key</div>
+                    <input
+                      type="password"
+                      className="dropdown-input"
+                      value={llmConfig.apiKey}
+                      onChange={(e) => updateConfig({ apiKey: e.target.value })}
+                      placeholder="输入 API Key"
+                    />
+                  </div>
+                  {llmConfig.provider === 'custom' && (
+                    <div className="dropdown-section">
+                      <div className="dropdown-label">API URL</div>
+                      <input
+                        type="text"
+                        className="dropdown-input"
+                        value={llmConfig.apiUrl}
+                        onChange={(e) => updateConfig({ apiUrl: e.target.value })}
+                        placeholder="API 地址"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* 编辑模式切换 */}
+            {hasContent && (
+              <button
+                className={`toolbar-btn edit-mode-btn ${isEditMode ? 'active' : ''}`}
+                onClick={onToggleEditMode}
+                title={isEditMode ? '退出编辑模式' : '进入编辑模式'}
+              >
+                <Edit3 size={16} />
+                <span>编辑</span>
+              </button>
+            )}
+          </div>
+
+          <div className="toolbar-right">
+            <button
+              className="send-btn"
+              onClick={onSendMessage}
+              disabled={loading || !prompt.trim()}
+              title={isEditMode ? '发送编辑指令' : '发送'}
+            >
+              {loading ? (
+                <Loader2 size={16} className="spin" />
+              ) : (
+                <Send size={16} />
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>
