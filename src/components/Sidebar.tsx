@@ -293,16 +293,15 @@ const Sidebar: React.FC<SidebarProps> = ({
             </div>
 
             {/* 编辑模式切换 */}
-            {hasContent && (
-              <button
-                className={`toolbar-btn edit-mode-btn ${isEditMode ? 'active' : ''}`}
-                onClick={onToggleEditMode}
-                title={isEditMode ? '退出编辑模式' : '进入编辑模式'}
-              >
-                <Edit3 size={16} />
-                <span>编辑</span>
-              </button>
-            )}
+            <button
+              className={`toolbar-btn edit-mode-btn ${isEditMode ? 'active' : ''}`}
+              onClick={onToggleEditMode}
+              title={isEditMode ? '退出编辑模式' : '进入编辑模式'}
+              disabled={!hasContent}
+            >
+              <Edit3 size={16} />
+              <span>编辑</span>
+            </button>
           </div>
 
           <div className="toolbar-right">
