@@ -3,6 +3,7 @@ import * as path from 'path';
 import mammoth from 'mammoth';
 import pdfParse from 'pdf-parse';
 import WordExtractor from 'word-extractor';
+import PDFDocument from 'pdfkit';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle } from 'docx';
 import { marked } from 'marked';
 
@@ -960,101 +961,129 @@ export async function convertToFormat(
   }
 
   if (format === 'pdf') {
-    let browser: any = null;
     try {
-      // 使用 Puppeteer 将 Markdown 转换为 HTML 再转为 PDF
-      const puppeteer = await import('puppeteer');
-      browser = await puppeteer.launch({
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      });
-      
-      const page = await browser.newPage();
-      
-      // 使用 marked 将 Markdown 转换为 HTML
-      const htmlContent = marked.parse(mdContent) as string;
-      
-      // 处理 LaTeX 公式：将 $...$ 和 $$...$$ 转换为 KaTeX span
-      const processedHtml = htmlContent
-        .replace(/\$\$([^$]+)\$\$/g, '<span class="katex-display">$1</span>')
-        .replace(/\$([^$]+)\$/g, '<span class="katex-inline">$1</span>');
-      
-      const fullHtml = `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <meta charset="UTF-8">
-            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-            <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-            <style>
-              body {
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-                line-height: 1.8;
-                max-width: 800px;
-                margin: 0 auto;
-                padding: 40px 20px;
-                color: #333;
-              }
-              h1 { font-size: 2em; margin-top: 0.67em; margin-bottom: 0.67em; font-weight: 600; }
-              h2 { font-size: 1.5em; margin-top: 0.83em; margin-bottom: 0.83em; font-weight: 600; }
-              h3 { font-size: 1.17em; margin-top: 1em; margin-bottom: 1em; font-weight: 600; }
-              p { margin: 1em 0; }
-              ul, ol { margin: 1em 0; padding-left: 2em; }
-              li { margin: 0.5em 0; }
-              code { background: #f5f5f5; padding: 2px 6px; border-radius: 3px; font-family: 'Monaco', monospace; }
-              pre { background: #f5f5f5; padding: 16px; border-radius: 8px; overflow-x: auto; }
-              blockquote { border-left: 4px solid #667eea; padding-left: 16px; margin-left: 0; color: #666; }
-              .katex-display { display: block; text-align: center; margin: 1em 0; }
-            </style>
-          </head>
-          <body>
-            ${processedHtml}
-            <script>
-              // 渲染所有 KaTeX 公式
-              document.querySelectorAll('.katex-inline').forEach(el => {
-                try {
-                  katex.render(el.textContent, el, { throwOnError: false });
-                } catch (e) { console.error(e); }
-              });
-              document.querySelectorAll('.katex-display').forEach(el => {
-                try {
-                  katex.render(el.textContent, el, { throwOnError: false, displayMode: true });
-                } catch (e) { console.error(e); }
-              });
-            </script>
-          </body>
-        </html>
-      `;
-      
-      await page.setContent(fullHtml, { waitUntil: 'networkidle0' });
-      // 等待 KaTeX 渲染完成
-      await page.waitForFunction(`
-        (() => {
-          const elements = document.querySelectorAll('.katex-inline, .katex-display');
-          return elements.length === 0 || Array.from(elements).every(el => el.querySelector('.katex'));
-        })()
-      `, { timeout: 5000 }).catch(() => {});
-      
-      await page.pdf({
-        path: filePath,
-        format: 'A4',
-        margin: {
-          top: '20mm',
-          right: '20mm',
-          bottom: '20mm',
-          left: '20mm',
+      // 使用 pdfkit 将 Markdown 转换为 PDF
+      const doc = new PDFDocument({
+        size: 'A4',
+        margins: { top: 50, bottom: 50, left: 50, right: 50 },
+        info: {
+          Title: 'Work2Word Export',
+          Author: 'Work2Word',
         },
-        printBackground: true,
       });
-      
-      const buffer = await fs.readFile(filePath);
-      return { path: filePath, buffer };
+
+      // 注册中文字体 (使用系统字体)
+      const fontPath = '/System/Library/Fonts/PingFang.ttc';
+      try {
+        doc.registerFont('Chinese', fontPath);
+      } catch {
+        // 如果系统字体不可用，使用默认字体
+      }
+
+      const chunks: Buffer[] = [];
+      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+
+      const pdfPromise = new Promise<Buffer>((resolve, reject) => {
+        doc.on('end', () => resolve(Buffer.concat(chunks)));
+        doc.on('error', reject);
+      });
+
+      // 解析 Markdown 并写入 PDF
+      const lines = mdContent.split('\n');
+      let inCodeBlock = false;
+      let codeContent = '';
+
+      for (const line of lines) {
+        // 代码块处理
+        if (line.startsWith('```')) {
+          if (inCodeBlock) {
+            // 结束代码块
+            doc.font('Courier').fontSize(10).fillColor('#333');
+            doc.rect(doc.x - 5, doc.y - 5, 500, doc.heightOfString(codeContent, { width: 490 }) + 10)
+              .fill('#f5f5f5');
+            doc.fillColor('#333').text(codeContent, { width: 490 });
+            doc.moveDown(0.5);
+            codeContent = '';
+            inCodeBlock = false;
+          } else {
+            inCodeBlock = true;
+          }
+          continue;
+        }
+
+        if (inCodeBlock) {
+          codeContent += line + '\n';
+          continue;
+        }
+
+        // 空行
+        if (!line.trim()) {
+          doc.moveDown(0.5);
+          continue;
+        }
+
+        // 标题
+        if (line.startsWith('# ')) {
+          try { doc.font('Chinese'); } catch { doc.font('Helvetica-Bold'); }
+          doc.fontSize(24).fillColor('#333').text(line.slice(2), { align: 'left' });
+          doc.moveDown(0.5);
+          continue;
+        }
+        if (line.startsWith('## ')) {
+          try { doc.font('Chinese'); } catch { doc.font('Helvetica-Bold'); }
+          doc.fontSize(20).fillColor('#333').text(line.slice(3), { align: 'left' });
+          doc.moveDown(0.5);
+          continue;
+        }
+        if (line.startsWith('### ')) {
+          try { doc.font('Chinese'); } catch { doc.font('Helvetica-Bold'); }
+          doc.fontSize(16).fillColor('#333').text(line.slice(4), { align: 'left' });
+          doc.moveDown(0.5);
+          continue;
+        }
+        if (line.startsWith('#### ')) {
+          try { doc.font('Chinese'); } catch { doc.font('Helvetica-Bold'); }
+          doc.fontSize(14).fillColor('#333').text(line.slice(5), { align: 'left' });
+          doc.moveDown(0.5);
+          continue;
+        }
+
+        // 列表项
+        if (line.match(/^[-*]\s/)) {
+          try { doc.font('Chinese'); } catch { doc.font('Helvetica'); }
+          doc.fontSize(12).fillColor('#333').text('• ' + line.slice(2), { indent: 20 });
+          continue;
+        }
+        if (line.match(/^\d+\.\s/)) {
+          try { doc.font('Chinese'); } catch { doc.font('Helvetica'); }
+          doc.fontSize(12).fillColor('#333').text(line, { indent: 20 });
+          continue;
+        }
+
+        // 引用
+        if (line.startsWith('> ')) {
+          try { doc.font('Chinese'); } catch { doc.font('Helvetica-Oblique'); }
+          doc.fontSize(12).fillColor('#666').text(line.slice(2), { indent: 20 });
+          continue;
+        }
+
+        // 普通段落 - 处理粗体和斜体
+        let text = line
+          .replace(/\*\*([^*]+)\*\*/g, '$1')  // 粗体简化处理
+          .replace(/\*([^*]+)\*/g, '$1')       // 斜体简化处理
+          .replace(/`([^`]+)`/g, '$1');        // 行内代码简化处理
+
+        try { doc.font('Chinese'); } catch { doc.font('Helvetica'); }
+        doc.fontSize(12).fillColor('#333').text(text, { align: 'justify', lineGap: 4 });
+      }
+
+      doc.end();
+
+      const pdfBuffer = await pdfPromise;
+      await fs.writeFile(filePath, pdfBuffer);
+      return { path: filePath, buffer: pdfBuffer };
     } catch (error: any) {
       throw new Error(`转换 PDF 失败: ${error.message}`);
-    } finally {
-      if (browser) {
-        await browser.close();
-      }
     }
   }
 
