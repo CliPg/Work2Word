@@ -702,7 +702,8 @@ function createListItemParagraphs(token: any, level: number = 0, formatSettings?
   const paragraphs: Paragraph[] = [];
   const paraStyle = formatSettings?.paragraph || defaultStyles;
   const isOrdered = token.ordered || false;
-  const bulletChars = ['●', '○', '▪'];
+  // 使用更小的圆点符号
+  const bulletChars = ['•', '◦', '▪'];
   const bulletChar = isOrdered ? '' : bulletChars[level % 3];
   
   const items = token.items || [];
