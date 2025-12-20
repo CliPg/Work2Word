@@ -1,7 +1,7 @@
 {
   "name": "work2word",
   "version": "1.0.0",
-  "description": "AI-powered homework assistant for Mac",
+  "description": "AI-powered homework assistant for Mac and Windows",
   "main": "dist/main.js",
   "scripts": {
     "dev": "npm run build:electron && concurrently \"npm run dev:react\" \"npm run dev:electron\"",
@@ -12,16 +12,23 @@
     "build:electron": "tsc -p tsconfig.electron.json",
     "preview": "vite preview",
     "package": "electron-builder",
-    "clean": "rm -rf node_modules dist",
+    "package:mac": "electron-builder --mac",
+    "package:win": "electron-builder --win",
+    "package:all": "electron-builder --mac --win",
+    "clean": "node -e \"require('fs').rmSync('node_modules', {recursive: true, force: true}); require('fs').rmSync('dist', {recursive: true, force: true});\"",
+    "clean:unix": "rm -rf node_modules dist",
+    "clean:win": "if exist node_modules rmdir /s /q node_modules && if exist dist rmdir /s /q dist",
     "reinstall": "npm run clean && npm install",
-    "install:fast": "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true npm install",
+    "install:fast": "cross-env PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true npm install",
     "install:cn": "npm install --registry=https://registry.npmmirror.com"
   },
   "keywords": [
     "homework",
     "ai",
     "llm",
-    "mac"
+    "mac",
+    "windows",
+    "cross-platform"
   ],
   "author": "",
   "license": "MIT",
@@ -34,6 +41,7 @@
     "@types/react-dom": "^18.2.17",
     "@vitejs/plugin-react": "^4.2.1",
     "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
     "electron": "^28.0.0",
     "electron-builder": "^24.9.1",
     "typescript": "^5.3.3",
@@ -67,16 +75,68 @@
   "build": {
     "appId": "com.work2word.app",
     "productName": "Work2Word",
+    "directories": {
+      "output": "release"
+    },
     "mac": {
       "category": "public.app-category.productivity",
       "target": [
-        "dmg",
-        "zip"
-      ]
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "build/icon.icns",
+      "console": false
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "ia32"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "console": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerLanguages": [
+        "zh_CN",
+        "en_US"
+      ],
+      "language": "2052"
     },
     "files": [
       "dist/**/*",
       "node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "build/",
+        "to": ".",
+        "filter": [
+          "**/*"
+        ]
+      }
     ]
   }
 }

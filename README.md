@@ -1,6 +1,6 @@
 # Work2Word - AI 驱动的智能作业助手
 
-一个简洁美观的 Mac 应用程序，帮助您使用 AI 完成作业任务。
+一个简洁美观的跨平台应用程序，帮助您使用 AI 完成作业任务。支持 macOS 和 Windows。
 
 ## 功能特性
 
@@ -9,6 +9,7 @@
 - 🤖 **多 LLM 支持**：支持通义千问 (Qwen)、OpenAI 和自定义 API
 - 📝 **多格式导出**：支持导出为 Markdown、Word 文档和 PDF 格式
 - 🎨 **简洁美观的界面**：现代化的 UI 设计，提供流畅的用户体验
+- 💻 **跨平台支持**：同时支持 macOS 和 Windows 系统
 
 ## 技术栈
 
@@ -45,8 +46,14 @@ npm run dev
 # 构建前端和 Electron
 npm run build
 
-# 打包为 Mac 应用
-npm run package
+# 打包为 macOS 应用
+npm run package:mac
+
+# 打包为 Windows 应用
+npm run package:win
+
+# 同时打包 macOS 和 Windows
+npm run package:all
 ```
 
 ## 使用说明
@@ -81,18 +88,53 @@ npm run package
 ## 项目结构
 
 ```
-work2word/
-├── electron/          # Electron 主进程代码
-│   ├── main.ts       # 主进程入口
-│   ├── preload.ts    # 预加载脚本
-│   ├── fileProcessor.ts  # 文件处理逻辑
-│   └── llmService.ts     # LLM 调用服务
-├── src/              # React 前端代码
-│   ├── components/  # React 组件
-│   ├── App.tsx      # 主应用组件
-│   └── main.tsx     # React 入口
-├── package.json     # 项目配置和依赖
-└── README.md        # 项目说明
+electron/
+├── main.ts                 # 主进程入口
+├── preload.ts              # 预加载脚本
+├── types.d.ts              # 类型声明
+├── services/               # 服务层
+│   ├── index.ts            # 服务导出
+│   ├── fileService.ts      # 文件读取服务
+│   ├── llmService.ts       # LLM 调用服务
+│   └── exportService.ts    # 导出转换服务
+├── utils/                  # 工具函数
+│   ├── index.ts            # 工具导出
+│   ├── markdownParser.ts   # Markdown 解析
+│   └── latexConverter.ts   # LaTeX 转换
+└── types/                  # 类型定义
+    └── index.ts            # 类型导出
+
+src/
+├── main.tsx                # React 入口
+├── App.tsx                 # 主组件
+├── App.css                 # 主样式
+├── index.css               # 全局样式
+├── electron.d.ts           # Electron API 声明
+├── components/             # UI 组件
+│   ├── index.ts            # 组件导出
+│   ├── editor/             # 编辑器相关
+│   │   ├── MarkdownEditor.tsx
+│   │   └── MarkdownEditor.css
+│   ├── preview/            # 预览相关
+│   │   ├── WordPreview.tsx
+│   │   └── WordPreview.css
+│   ├── sidebar/            # 侧边栏相关
+│   │   ├── Sidebar.tsx
+│   │   └── Sidebar.css
+│   ├── settings/           # 设置相关
+│   │   ├── FormatSettings.tsx
+│   │   ├── FormatSettings.css
+│   │   ├── LLMConfig.tsx
+│   │   └── LLMConfig.css
+│   └── common/             # 通用组件
+│       ├── FileUpload.tsx
+│       ├── FileUpload.css
+│       ├── PromptInput.tsx
+│       ├── PromptInput.css
+│       ├── ResultDisplay.tsx
+│       └── ResultDisplay.css
+└── hooks/                  # 自定义 Hooks（未来扩展）
+    └── index.ts
 ```
 
 ## 注意事项
@@ -144,8 +186,10 @@ npm run dev:electron
 # 构建生产版本
 npm run build
 
-# 打包为 Mac 应用
-npm run package
+# 打包应用
+npm run package:mac    # macOS
+npm run package:win    # Windows
+npm run package:all    # 所有平台
 ```
 
 ## 功能特性详解

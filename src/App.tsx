@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import MarkdownEditor, { MarkdownEditorHandle, EditChange } from './components/MarkdownEditor';
-import WordPreview, { WordPreviewHandle } from './components/WordPreview';
-import Sidebar from './components/Sidebar';
-import FormatSettingsPanel, { FormatSettings, defaultFormatSettings } from './components/FormatSettings';
+import MarkdownEditor, { MarkdownEditorHandle, EditChange } from './components/editor/MarkdownEditor';
+import WordPreview, { WordPreviewHandle } from './components/preview/WordPreview';
+import Sidebar from './components/sidebar/Sidebar';
+import FormatSettingsPanel, { FormatSettings, defaultFormatSettings } from './components/settings/FormatSettings';
 import './App.css';
 
 interface LLMConfigType {

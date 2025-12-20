@@ -2,25 +2,42 @@ import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import { processFile, convertToFormat } from './fileProcessor';
-import { callLLM, processHomework, ProcessStepResult, HomeworkProcessResult, editContent } from './llmService';
+import { callLLM, processHomework, ProcessStepResult, HomeworkProcessResult, editContent } from './services/llmService';
 
 let mainWindow: BrowserWindow | null = null;
 
+// 检测当前平台
+const isMac = process.platform === 'darwin';
+const isWin = process.platform === 'win32';
+
 function createWindow() {
-  mainWindow = new BrowserWindow({
+  // 根据平台设置窗口选项
+  const windowOptions: Electron.BrowserWindowConstructorOptions = {
     width: 1200,
     height: 800,
     minWidth: 900,
     minHeight: 600,
     backgroundColor: '#ffffff',
-    titleBarStyle: 'hiddenInset',
     show: false, // 先不显示，等页面加载完成后再显示
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
     },
-  });
+  };
+
+  // Mac 特有的标题栏样式
+  if (isMac) {
+    windowOptions.titleBarStyle = 'hiddenInset';
+  }
+
+  // Windows 特有设置
+  if (isWin) {
+    windowOptions.frame = true; // 使用系统标准窗口框架
+    windowOptions.autoHideMenuBar = true; // 自动隐藏菜单栏
+  }
+
+  mainWindow = new BrowserWindow(windowOptions);
 
   // 监听页面加载完成
   mainWindow.webContents.once('did-finish-load', () => {
