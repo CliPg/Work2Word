@@ -94,8 +94,10 @@ function createWindow() {
     });
     mainWindow.webContents.openDevTools();
   } else {
-    console.log('生产模式：加载本地文件');
-    mainWindow.loadFile(path.join(__dirname, '../index.html'));
+    // 生产模式：index.html 在 dist 目录下，与 main.js 同级
+    const indexPath = path.join(__dirname, 'index.html');
+    console.log('生产模式：加载本地文件', indexPath);
+    mainWindow.loadFile(indexPath);
   }
 
   mainWindow.on('closed', () => {
