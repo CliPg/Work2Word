@@ -100,7 +100,7 @@
           ]
         }
       ],
-      "icon": "build/icon.icns"
+      "icon": "build/w2w_256x256.icns"
     },
     "win": {
       "target": [
@@ -118,7 +118,7 @@
           ]
         }
       ],
-      "icon": "build/icon.ico"
+      "icon": "build/w2w_256x256.ico"
     },
     "nsis": {
       "oneClick": false,
