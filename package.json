@@ -94,8 +94,7 @@
           ]
         }
       ],
-      "icon": "build/icon.icns",
-      "console": false
+      "icon": "build/icon.icns"
     },
     "win": {
       "target": [
@@ -113,8 +112,7 @@
           ]
         }
       ],
-      "icon": "build/icon.ico",
-      "console": false
+      "icon": "build/icon.ico"
     },
     "nsis": {
       "oneClick": false,

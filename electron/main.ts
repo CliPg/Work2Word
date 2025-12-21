@@ -82,8 +82,9 @@ function createWindow() {
     console.log(`[Console ${level}]:`, message);
   });
 
-  // 开发模式
-  const isDev = !process.env.NODE_ENV || process.env.NODE_ENV === 'development';
+  // 判断是否为开发模式：检查是否打包运行
+  // app.isPackaged 在打包后的应用中为 true
+  const isDev = !app.isPackaged;
   
   if (isDev) {
     console.log('开发模式：尝试加载 http://localhost:5173');
