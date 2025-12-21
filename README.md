@@ -48,52 +48,7 @@ npm run package:all
 ### Windows下载
 右侧release提供安装exe
 
-## 功能特性
 
-- 📄 **多格式文件支持**：支持 DOC、DOCX、PDF、TXT 格式的作业附件
-- ✍️ **智能作业处理**：输入作业要求，AI 自动完成作业内容
-- 🤖 **多 LLM 支持**：支持通义千问 (Qwen)、OpenAI 和自定义 API
-- 📝 **多格式导出**：支持导出为 Markdown、Word 文档和 PDF 格式
-- 🎨 **简洁美观的界面**：现代化的 UI 设计，提供流畅的用户体验
-- 💻 **跨平台支持**：同时支持 macOS 和 Windows 系统
-
-## 技术栈
-
-- **前端**：React + TypeScript + Vite
-- **桌面框架**：Electron
-- **文件处理**：mammoth (Word)、pdf-parse (PDF)
-- **格式转换**：docx (Word 生成)、puppeteer (PDF 生成)
-- **Markdown 渲染**：react-markdown
-
-
-## 使用说明
-
-1. **上传作业附件**：点击或拖拽文件到上传区域，支持 DOC、DOCX、PDF、TXT 格式
-2. **输入作业要求**：在文本框中输入您的作业要求（prompt）
-3. **配置 LLM**：选择 LLM 提供商并输入 API Key
-4. **开始处理**：点击"开始处理"按钮，AI 将根据作业要求和附件内容生成md文本
-5. **查看结果**：处理完成后，结果会以 Markdown 格式显示在右侧面板，中间显示word渲染
-6. **导出文件**：点击底部的保存按钮，选择导出格式（MD、DOC、PDF）
-
-## LLM 配置
-
-### 通义千问 (Qwen)
-
-1. 在"提供商"下拉框中选择"通义千问 (Qwen)"
-2. 输入您的 API Key（可在阿里云 DashScope 获取）
-3. 选择模型（默认：qwen-turbo）
-
-### OpenAI
-
-1. 在"提供商"下拉框中选择"OpenAI"
-2. 输入您的 OpenAI API Key
-3. 选择模型（默认：gpt-3.5-turbo）
-
-### 自定义 API
-
-1. 在"提供商"下拉框中选择"自定义 API"
-2. 输入 API URL 和 API Key（如需要）
-3. 输入模型名称
 
 ## 项目结构
 
@@ -146,6 +101,46 @@ src/
 └── hooks/                  # 自定义 Hooks（未来扩展）
     └── index.ts
 ```
+
+
+## 功能特性
+
+- 📄 **多格式文件支持**：支持 DOC、DOCX、PDF、TXT 格式的作业附件
+- ✍️ **智能作业处理**：输入作业要求，AI 自动完成作业内容
+- 🤖 **多 LLM 支持**：支持通义千问 (Qwen)、OpenAI 和自定义 API
+- 📝 **多格式导出**：支持导出为 Markdown、Word 文档和 PDF 格式
+- 🎨 **简洁美观的界面**：现代化的 UI 设计，提供流畅的用户体验
+- 💻 **跨平台支持**：同时支持 macOS 和 Windows 系统
+- 🚀 **AI编辑**：支持AI文本编辑
+
+## 技术栈
+
+- **前端**：React + TypeScript + Vite
+- **桌面框架**：Electron
+- **文件处理**：mammoth (Word)、pdf-parse (PDF)
+- **格式转换**：docx (Word 生成)、puppeteer (PDF 生成)
+- **Markdown 渲染**：react-markdown
+
+
+## LLM 配置
+
+### 通义千问 (Qwen)
+
+1. 在"提供商"下拉框中选择"通义千问 (Qwen)"
+2. 输入您的 API Key（可在阿里云 DashScope 获取）
+3. 选择模型（默认：qwen-turbo）
+
+### OpenAI
+
+1. 在"提供商"下拉框中选择"OpenAI"
+2. 输入您的 OpenAI API Key
+3. 选择模型（默认：gpt-3.5-turbo）
+
+### 自定义 API
+
+1. 在"提供商"下拉框中选择"自定义 API"
+2. 输入 API URL 和 API Key（如需要）
+3. 输入模型名称
 
 
 ## 功能特性详解
