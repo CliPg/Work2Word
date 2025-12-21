@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs/promises';
+import { autoUpdater } from 'electron-updater';
 import { processFile, convertToFormat } from './fileProcessor';
 import { callLLM, processHomework, ProcessStepResult, HomeworkProcessResult, editContent } from './services/llmService';
 
@@ -102,8 +103,76 @@ function createWindow() {
   });
 }
 
+// ==================== 自动更新配置 ====================
+function setupAutoUpdater() {
+  // 仅在打包后的应用中启用自动更新
+  if (!app.isPackaged) {
+    console.log('开发模式：跳过自动更新检查');
+    return;
+  }
+
+  // 配置日志
+  autoUpdater.logger = console;
+
+  // 检查更新出错
+  autoUpdater.on('error', (error) => {
+    console.error('更新检查失败:', error);
+  });
+
+  // 检查更新中
+  autoUpdater.on('checking-for-update', () => {
+    console.log('正在检查更新...');
+  });
+
+  // 有可用更新
+  autoUpdater.on('update-available', (info) => {
+    console.log('发现新版本:', info.version);
+    if (mainWindow) {
+      dialog.showMessageBox(mainWindow, {
+        type: 'info',
+        title: '发现新版本',
+        message: `发现新版本 ${info.version}，正在后台下载...`,
+        buttons: ['确定']
+      });
+    }
+  });
+
+  // 没有可用更新
+  autoUpdater.on('update-not-available', () => {
+    console.log('当前已是最新版本');
+  });
+
+  // 下载进度
+  autoUpdater.on('download-progress', (progress) => {
+    console.log(`下载进度: ${Math.round(progress.percent)}%`);
+  });
+
+  // 下载完成
+  autoUpdater.on('update-downloaded', (info) => {
+    console.log('更新下载完成:', info.version);
+    if (mainWindow) {
+      dialog.showMessageBox(mainWindow, {
+        type: 'info',
+        title: '更新已就绪',
+        message: `新版本 ${info.version} 已下载完成，是否立即重启应用以完成更新？`,
+        buttons: ['立即重启', '稍后']
+      }).then((result) => {
+        if (result.response === 0) {
+          autoUpdater.quitAndInstall();
+        }
+      });
+    }
+  });
+
+  // 启动时检查更新
+  autoUpdater.checkForUpdatesAndNotify();
+}
+
 app.whenReady().then(() => {
   createWindow();
+  
+  // 启动自动更新检查
+  setupAutoUpdater();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -252,5 +321,23 @@ ipcMain.handle('load-settings', async () => {
     console.error('加载设置失败:', error);
     return { success: false, error: error.message };
   }
+});
+
+// 手动检查更新
+ipcMain.handle('check-for-updates', async () => {
+  if (!app.isPackaged) {
+    return { success: false, error: '开发模式下无法检查更新' };
+  }
+  try {
+    const result = await autoUpdater.checkForUpdates();
+    return { success: true, version: result?.updateInfo?.version };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+// 获取应用版本
+ipcMain.handle('get-app-version', () => {
+  return app.getVersion();
 });
 

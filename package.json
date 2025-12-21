@@ -55,6 +55,7 @@
   "dependencies": {
     "axios": "^1.6.2",
     "docx": "^8.5.0",
+    "electron-updater": "^6.6.2",
     "file-saver": "^2.0.5",
     "katex": "^0.16.27",
     "lucide-react": "^0.303.0",
@@ -77,6 +78,11 @@
     "productName": "Work2Word",
     "directories": {
       "output": "release"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "CliPg",
+      "repo": "Work2Word"
     },
     "mac": {
       "category": "public.app-category.productivity",

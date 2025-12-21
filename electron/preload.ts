@@ -21,6 +21,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // 设置相关
   saveSettings: (settings: any) => ipcRenderer.invoke('save-settings', settings),
   loadSettings: () => ipcRenderer.invoke('load-settings'),
+  // 更新相关
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
 });
 
 declare global {
@@ -36,6 +39,8 @@ declare global {
       openFileDialog: () => Promise<any>;
       saveSettings: (settings: any) => Promise<any>;
       loadSettings: () => Promise<any>;
+      checkForUpdates: () => Promise<any>;
+      getAppVersion: () => Promise<string>;
     };
   }
 }
