@@ -37,48 +37,73 @@ interface EditContentResult {
   summary: string;
 }
 
-const STORAGE_KEY = 'work2word_config';
-const FORMAT_STORAGE_KEY = 'work2word_format';
+// 默认配置
+const defaultLLMConfig: LLMConfigType = {
+  provider: 'qwen',
+  apiKey: '',
+  apiUrl: '',
+  model: 'qwen-turbo',
+};
+
+// localStorage 键名（作为 Electron API 不可用时的回退）
+const STORAGE_KEY = 'work2word_settings';
 
 function App() {
   const [filePath, setFilePath] = useState<string>('');
   const [fileContent, setFileContent] = useState<string>('');
   const [prompt, setPrompt] = useState<string>('');
   const [messages, setMessages] = useState<Message[]>([]);
-  
-  // 从 localStorage 加载配置
-  const loadConfig = (): LLMConfigType => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        return JSON.parse(saved);
+  const [settingsLoaded, setSettingsLoaded] = useState<boolean>(false);
+
+  const [llmConfig, setLLMConfig] = useState<LLMConfigType>(defaultLLMConfig);
+  const [formatSettings, setFormatSettings] = useState<FormatSettings>(defaultFormatSettings);
+
+  // 从文件加载设置
+  useEffect(() => {
+    const loadSettings = async () => {
+      // 优先使用 Electron API
+      if (window.electronAPI?.loadSettings) {
+        try {
+          const result = await window.electronAPI.loadSettings();
+          if (result.success && result.settings) {
+            if (result.settings.llmConfig) {
+              setLLMConfig(result.settings.llmConfig);
+            }
+            if (result.settings.formatSettings) {
+              setFormatSettings(result.settings.formatSettings);
+            }
+            console.log('设置已从文件加载');
+          }
+        } catch (e) {
+          console.error('加载设置失败:', e);
+        } finally {
+          setSettingsLoaded(true);
+        }
+        return;
       }
-    } catch (e) {
-      console.error('加载配置失败:', e);
-    }
-    return {
-      provider: 'qwen',
-      apiKey: '',
-      apiUrl: '',
-      model: 'qwen-turbo',
+
+      // 回退到 localStorage（开发模式或浏览器环境）
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const settings = JSON.parse(saved);
+          if (settings.llmConfig) {
+            setLLMConfig(settings.llmConfig);
+          }
+          if (settings.formatSettings) {
+            setFormatSettings(settings.formatSettings);
+          }
+          console.log('设置已从 localStorage 加载');
+        }
+      } catch (e) {
+        console.error('从 localStorage 加载设置失败:', e);
+      } finally {
+        setSettingsLoaded(true);
+      }
     };
-  };
 
-  // 从 localStorage 加载排版设置
-  const loadFormatSettings = (): FormatSettings => {
-    try {
-      const saved = localStorage.getItem(FORMAT_STORAGE_KEY);
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch (e) {
-      console.error('加载排版设置失败:', e);
-    }
-    return defaultFormatSettings;
-  };
-
-  const [llmConfig, setLLMConfig] = useState<LLMConfigType>(loadConfig);
-  const [formatSettings, setFormatSettings] = useState<FormatSettings>(loadFormatSettings);
+    loadSettings();
+  }, []);
   const [formatPanelVisible, setFormatPanelVisible] = useState(false);
   const [result, setResult] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
@@ -201,23 +226,39 @@ function App() {
     };
   }, []);
 
-  // 保存配置到 localStorage
+  // 保存设置到文件
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(llmConfig));
-    } catch (e) {
-      console.error('保存配置失败:', e);
-    }
-  }, [llmConfig]);
+    // 等待设置加载完成后再保存，避免覆盖已保存的设置
+    if (!settingsLoaded) return;
+    
+    const saveSettings = async () => {
+      const settingsData = {
+        llmConfig,
+        formatSettings,
+      };
 
-  // 保存排版设置到 localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem(FORMAT_STORAGE_KEY, JSON.stringify(formatSettings));
-    } catch (e) {
-      console.error('保存排版设置失败:', e);
-    }
-  }, [formatSettings]);
+      // 优先使用 Electron API
+      if (window.electronAPI?.saveSettings) {
+        try {
+          await window.electronAPI.saveSettings(settingsData);
+          console.log('设置已保存到文件');
+        } catch (e) {
+          console.error('保存设置失败:', e);
+        }
+        return;
+      }
+
+      // 回退到 localStorage（开发模式或浏览器环境）
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(settingsData));
+        console.log('设置已保存到 localStorage');
+      } catch (e) {
+        console.error('保存设置到 localStorage 失败:', e);
+      }
+    };
+
+    saveSettings();
+  }, [llmConfig, formatSettings, settingsLoaded]);
 
   const handleFileSelect = async () => {
     try {

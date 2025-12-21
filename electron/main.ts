@@ -220,3 +220,37 @@ ipcMain.handle('open-file-dialog', async () => {
   return { canceled: false, filePath: result.filePaths[0] };
 });
 
+// 获取设置文件路径
+const getSettingsPath = () => {
+  const userDataPath = app.getPath('userData');
+  return path.join(userDataPath, 'settings.json');
+};
+
+// 保存设置到文件
+ipcMain.handle('save-settings', async (_, settings: any) => {
+  try {
+    const settingsPath = getSettingsPath();
+    await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
+    return { success: true };
+  } catch (error: any) {
+    console.error('保存设置失败:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// 加载设置
+ipcMain.handle('load-settings', async () => {
+  try {
+    const settingsPath = getSettingsPath();
+    const data = await fs.readFile(settingsPath, 'utf-8');
+    return { success: true, settings: JSON.parse(data) };
+  } catch (error: any) {
+    // 文件不存在时返回空设置
+    if (error.code === 'ENOENT') {
+      return { success: true, settings: null };
+    }
+    console.error('加载设置失败:', error);
+    return { success: false, error: error.message };
+  }
+});
+

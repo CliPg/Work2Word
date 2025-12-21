@@ -160,7 +160,3 @@ src/
 - **Word 文档**: 使用 docx 库生成 .docx 文件，支持标题、粗体、斜体等格式
 - **PDF 文档**: 使用 Puppeteer 将 Markdown 渲染为 HTML 后转换为 PDF
 
-## 许可证
-
-MIT
-
