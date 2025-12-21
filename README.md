@@ -1,6 +1,15 @@
-# Work2Word - AI 驱动的智能作业助手
+<p align="center">
+  <a href="https://www.getzep.com/">
+    <img src="./imgs/w2w.png" width="150">
+  </a>
+</p>
 
-一个简洁美观的跨平台应用程序，帮助您使用 AI 完成作业任务。支持 macOS 和 Windows。
+
+<h1 align="center" style="font-family: 'Times New Roman', Times, serif;">
+  Work2Word
+</h1>
+
+一个简洁美观的跨平台应用程序，用Markdown编辑文本，Word渲染，支持导出word、pdf、md。目前需要自行配置api实现根据上传文件和提示词生成和编辑md文本。软件开发的起因是大学时要写太多的报告、不断调整Word格式。
 
 ## 功能特性
 
