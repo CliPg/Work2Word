@@ -516,8 +516,23 @@ function App() {
 
     try {
       setError('');
+      // 根据格式生成默认文件名和后缀
+      const getFilenameForFormat = (fmt: 'doc' | 'pdf' | 'md') => {
+        const baseName = `作业_${Date.now()}`;
+        switch (fmt) {
+          case 'doc':
+            return `${baseName}.docx`;
+          case 'pdf':
+            return `${baseName}.pdf`;
+          case 'md':
+            return `${baseName}.md`;
+          default:
+            return baseName;
+        }
+      };
+
       const dialogResult = await window.electronAPI.saveFileDialog(
-        `作业_${Date.now()}`
+        getFilenameForFormat(format)
       );
 
       if (dialogResult.canceled) {

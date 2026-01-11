@@ -222,7 +222,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(({
               title="插入图片"
             >
               <Image size={14} />
-              {insertingImage ? '插入中...' : '图片'}
+              {insertingImage ? '插入中...' : '插入图片'}
             </button>
             <button
               className="editor-action-btn"

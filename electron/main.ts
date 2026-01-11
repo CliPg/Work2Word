@@ -306,16 +306,32 @@ ipcMain.handle('convert-file', async (_, mdContent: string, format: 'doc' | 'pdf
 
 ipcMain.handle('save-file-dialog', async (_, defaultFilename: string) => {
   if (!mainWindow) return { canceled: true };
-  
+
+  // 根据文件扩展名确定默认的文件类型
+  const ext = path.extname(defaultFilename).toLowerCase();
+
+  // 定义所有可用的过滤器
+  const allFilters = [
+    { name: 'Word Document', extensions: ['docx'] },
+    { name: 'PDF', extensions: ['pdf'] },
+    { name: 'Markdown', extensions: ['md'] },
+  ];
+
+  // 根据扩展名调整过滤器顺序，使匹配的类型排在前面
+  let filters = [...allFilters];
+  if (ext === '.docx') {
+    filters = [allFilters[0], allFilters[1], allFilters[2]];
+  } else if (ext === '.pdf') {
+    filters = [allFilters[1], allFilters[0], allFilters[2]];
+  } else if (ext === '.md') {
+    filters = [allFilters[2], allFilters[0], allFilters[1]];
+  }
+
   const result = await dialog.showSaveDialog(mainWindow, {
     defaultPath: defaultFilename,
-    filters: [
-      { name: 'Markdown', extensions: ['md'] },
-      { name: 'Word Document', extensions: ['docx'] },
-      { name: 'PDF', extensions: ['pdf'] },
-    ],
+    filters,
   });
-  
+
   return result;
 });
 
