@@ -124,13 +124,6 @@ const Sidebar: React.FC<SidebarProps> = ({
           <MessageSquare size={16} />
           <span>Work2Word</span>
         </div>
-        <button 
-          className="header-action-btn"
-          onClick={onOpenFormatSettings}
-          title="排版格式"
-        >
-          <Type size={14} />
-        </button>
       </div>
 
       {/* 对话区域 */}

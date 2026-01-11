@@ -32,25 +32,6 @@
   color: #667eea;
 }
 
-.header-action-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  background: transparent;
-  color: #888;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.header-action-btn:hover {
-  background: #3c3c3c;
-  color: #ccc;
-}
-
 /* 对话区域 */
 .chat-area {
   flex: 1;

@@ -52,6 +52,8 @@
   padding: 12px 16px;
   background: #2d2d2d;
   border-bottom: 1px solid #3c3c3c;
+  min-height: 35px;
+  max-height: 35px;
 }
 
 .format-settings-header svg:first-child {
