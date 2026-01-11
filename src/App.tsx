@@ -104,7 +104,6 @@ function App() {
 
     loadSettings();
   }, []);
-  const [formatPanelVisible, setFormatPanelVisible] = useState(false);
   const [result, setResult] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [fileLoading, setFileLoading] = useState<boolean>(false);
@@ -118,49 +117,81 @@ function App() {
 
   // 侧边栏可见性
   const [sidebarVisible, setSidebarVisible] = useState<boolean>(true);
+  const [formatSidebarVisible, setFormatSidebarVisible] = useState<boolean>(false);
 
   // 面板宽度状态 (百分比)
-  const [editorWidth, setEditorWidth] = useState<number>(33);
-  const [previewWidth, setPreviewWidth] = useState<number>(34);
-  const [sidebarWidth, setSidebarWidth] = useState<number>(33);
+  const [formatSidebarWidth, setFormatSidebarWidth] = useState<number>(20);
+  const [editorWidth, setEditorWidth] = useState<number>(26);
+  const [previewWidth, setPreviewWidth] = useState<number>(27);
+  const [sidebarWidth, setSidebarWidth] = useState<number>(27);
   
   // 拖拽相关
   const containerRef = useRef<HTMLDivElement>(null);
-  const isDragging = useRef<'left' | 'right' | null>(null);
+  const isDragging = useRef<'format' | 'editor' | 'preview' | null>(null);
   const startX = useRef<number>(0);
-  const startWidths = useRef<{ editor: number; preview: number; sidebar: number }>({ editor: 33, preview: 34, sidebar: 33 });
+  const startWidths = useRef<{ format: number; editor: number; preview: number; sidebar: number }>({
+    format: 20,
+    editor: 26,
+    preview: 27,
+    sidebar: 27
+  });
 
   // 滚动同步相关
   const editorRef = useRef<MarkdownEditorHandle>(null);
   const previewRef = useRef<WordPreviewHandle>(null);
 
   // 处理鼠标按下事件
-  const handleMouseDown = useCallback((resizer: 'left' | 'right') => (e: React.MouseEvent) => {
+  const handleMouseDown = useCallback((resizer: 'format' | 'editor' | 'preview') => (e: React.MouseEvent) => {
     e.preventDefault();
     isDragging.current = resizer;
     startX.current = e.clientX;
-    startWidths.current = { editor: editorWidth, preview: previewWidth, sidebar: sidebarWidth };
+    startWidths.current = { format: formatSidebarWidth, editor: editorWidth, preview: previewWidth, sidebar: sidebarWidth };
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
-  }, [editorWidth, previewWidth, sidebarWidth]);
+  }, [formatSidebarWidth, editorWidth, previewWidth, sidebarWidth]);
 
   // 处理鼠标移动事件
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDragging.current || !containerRef.current) return;
-      
+
       const containerWidth = containerRef.current.offsetWidth;
       const deltaX = e.clientX - startX.current;
       const deltaPercent = (deltaX / containerWidth) * 100;
-      
+
       const minWidth = 15; // 最小宽度百分比
       const maxWidth = 60; // 最大宽度百分比
-      
-      if (isDragging.current === 'left') {
+
+      if (isDragging.current === 'format') {
+        // 调整排版侧边栏和编辑器之间的分隔条
+        let newFormatWidth = startWidths.current.format + deltaPercent;
+        let newEditorWidth = startWidths.current.editor - deltaPercent;
+
+        // 限制宽度范围
+        if (newFormatWidth < minWidth) {
+          newEditorWidth -= (minWidth - newFormatWidth);
+          newFormatWidth = minWidth;
+        }
+        if (newFormatWidth > maxWidth) {
+          newEditorWidth += (newFormatWidth - maxWidth);
+          newFormatWidth = maxWidth;
+        }
+        if (newEditorWidth < minWidth) {
+          newFormatWidth -= (minWidth - newEditorWidth);
+          newEditorWidth = minWidth;
+        }
+        if (newEditorWidth > maxWidth) {
+          newFormatWidth += (newEditorWidth - maxWidth);
+          newEditorWidth = maxWidth;
+        }
+
+        setFormatSidebarWidth(newFormatWidth);
+        setEditorWidth(newEditorWidth);
+      } else if (isDragging.current === 'editor') {
         // 调整编辑器和预览之间的分隔条
         let newEditorWidth = startWidths.current.editor + deltaPercent;
         let newPreviewWidth = startWidths.current.preview - deltaPercent;
-        
+
         // 限制宽度范围
         if (newEditorWidth < minWidth) {
           newPreviewWidth += (newEditorWidth - minWidth);
@@ -178,14 +209,14 @@ function App() {
           newEditorWidth += (newPreviewWidth - maxWidth);
           newPreviewWidth = maxWidth;
         }
-        
+
         setEditorWidth(newEditorWidth);
         setPreviewWidth(newPreviewWidth);
-      } else if (isDragging.current === 'right') {
+      } else if (isDragging.current === 'preview') {
         // 调整预览和侧边栏之间的分隔条
         let newPreviewWidth = startWidths.current.preview + deltaPercent;
         let newSidebarWidth = startWidths.current.sidebar - deltaPercent;
-        
+
         // 限制宽度范围
         if (newPreviewWidth < minWidth) {
           newSidebarWidth += (newPreviewWidth - minWidth);
@@ -203,12 +234,12 @@ function App() {
           newPreviewWidth += (newSidebarWidth - maxWidth);
           newSidebarWidth = maxWidth;
         }
-        
+
         setPreviewWidth(newPreviewWidth);
         setSidebarWidth(newSidebarWidth);
       }
     };
-    
+
     const handleMouseUp = () => {
       if (isDragging.current) {
         isDragging.current = null;
@@ -216,10 +247,10 @@ function App() {
         document.body.style.userSelect = '';
       }
     };
-    
+
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
-    
+
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
@@ -514,8 +545,45 @@ function App() {
   };
 
   // 计算实际显示宽度
-  const actualEditorWidth = sidebarVisible ? editorWidth : editorWidth * 100 / (editorWidth + previewWidth);
-  const actualPreviewWidth = sidebarVisible ? previewWidth : previewWidth * 100 / (editorWidth + previewWidth);
+  const getVisibleWidths = () => {
+    const visible: { format: boolean; editor: boolean; preview: boolean; sidebar: boolean } = {
+      format: formatSidebarVisible,
+      editor: true,
+      preview: true,
+      sidebar: sidebarVisible
+    };
+    const visibleCount = Object.values(visible).filter(Boolean).length;
+
+    if (formatSidebarVisible && sidebarVisible) {
+      return { format: formatSidebarWidth, editor: editorWidth, preview: previewWidth, sidebar: sidebarWidth };
+    } else if (formatSidebarVisible && !sidebarVisible) {
+      const total = formatSidebarWidth + editorWidth + previewWidth;
+      return {
+        format: (formatSidebarWidth / total) * 100,
+        editor: (editorWidth / total) * 100,
+        preview: (previewWidth / total) * 100,
+        sidebar: 0
+      };
+    } else if (!formatSidebarVisible && sidebarVisible) {
+      const total = editorWidth + previewWidth + sidebarWidth;
+      return {
+        format: 0,
+        editor: (editorWidth / total) * 100,
+        preview: (previewWidth / total) * 100,
+        sidebar: (sidebarWidth / total) * 100
+      };
+    } else {
+      const total = editorWidth + previewWidth;
+      return {
+        format: 0,
+        editor: (editorWidth / total) * 100,
+        preview: (previewWidth / total) * 100,
+        sidebar: 0
+      };
+    }
+  };
+
+  const widths = getVisibleWidths();
 
   return (
     <div className="app-container">
@@ -526,9 +594,18 @@ function App() {
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/>
           </svg>
         </div>
-        <div 
-          className={`activity-icon ${sidebarVisible ? 'active' : ''}`} 
-          title={sidebarVisible ? '隐藏侧边栏' : '显示侧边栏'}
+        <div
+          className={`activity-icon ${formatSidebarVisible ? 'active' : ''}`}
+          title={formatSidebarVisible ? '隐藏排版设置' : '显示排版设置'}
+          onClick={() => setFormatSidebarVisible(!formatSidebarVisible)}
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M2.5 4v3h5v12h3V7h5V4h-13zm19 5h-9v3h3v7h3v-7h3V9z"/>
+          </svg>
+        </div>
+        <div
+          className={`activity-icon ${sidebarVisible ? 'active' : ''}`}
+          title={sidebarVisible ? '隐藏对话侧边栏' : '显示对话侧边栏'}
           onClick={() => setSidebarVisible(!sidebarVisible)}
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
@@ -539,8 +616,24 @@ function App() {
 
       {/* 主内容区 */}
       <div className="main-content" ref={containerRef}>
-        {/* 左侧: Markdown 编辑器 */}
-        <div className="panel editor-panel" style={{ width: `${actualEditorWidth}%` }}>
+        {/* 排版设置侧边栏 */}
+        {formatSidebarVisible && (
+          <>
+            <div className="panel format-sidebar-panel" style={{ width: `${widths.format}%` }}>
+              <FormatSettingsPanel
+                visible={true}
+                onClose={() => setFormatSidebarVisible(false)}
+                settings={formatSettings}
+                onSettingsChange={setFormatSettings}
+                sidebarMode={true}
+              />
+            </div>
+            <div className="panel-resizer" onMouseDown={handleMouseDown('format')} />
+          </>
+        )}
+
+        {/* Markdown 编辑器 */}
+        <div className="panel editor-panel" style={{ width: `${widths.editor}%` }}>
           <MarkdownEditor
             ref={editorRef}
             value={result}
@@ -556,13 +649,13 @@ function App() {
         </div>
 
         {/* 分隔条 */}
-        <div 
-          className="panel-resizer" 
-          onMouseDown={handleMouseDown('left')}
+        <div
+          className="panel-resizer"
+          onMouseDown={handleMouseDown('editor')}
         />
 
-        {/* 中间: Word 预览 */}
-        <div className="panel preview-panel" style={{ width: `${actualPreviewWidth}%` }}>
+        {/* Word 预览 */}
+        <div className="panel preview-panel" style={{ width: `${widths.preview}%` }}>
           <WordPreview
             ref={previewRef}
             content={result}
@@ -575,15 +668,15 @@ function App() {
 
         {/* 分隔条 */}
         {sidebarVisible && (
-          <div 
-            className="panel-resizer" 
-            onMouseDown={handleMouseDown('right')}
+          <div
+            className="panel-resizer"
+            onMouseDown={handleMouseDown('preview')}
           />
         )}
 
         {/* 右侧: 侧边栏 */}
         {sidebarVisible && (
-          <div className="panel sidebar-panel" style={{ width: `${sidebarWidth}%` }}>
+          <div className="panel sidebar-panel" style={{ width: `${widths.sidebar}%` }}>
             <Sidebar
               filePath={filePath}
               onFileSelect={handleFileSelect}
@@ -598,7 +691,7 @@ function App() {
               messages={messages}
               llmConfig={llmConfig}
               onConfigChange={setLLMConfig}
-              onOpenFormatSettings={() => setFormatPanelVisible(true)}
+              onOpenFormatSettings={() => setFormatSidebarVisible(true)}
               loading={loading}
               processingStep={processingStep}
               error={error}
@@ -610,14 +703,6 @@ function App() {
           </div>
         )}
       </div>
-
-      {/* 排版设置面板 */}
-      <FormatSettingsPanel
-        visible={formatPanelVisible}
-        onClose={() => setFormatPanelVisible(false)}
-        settings={formatSettings}
-        onSettingsChange={setFormatSettings}
-      />
 
       {/* 状态栏 */}
       <div className="status-bar">

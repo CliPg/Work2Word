@@ -90,6 +90,7 @@ interface FormatSettingsProps {
   onClose: () => void;
   settings: FormatSettings;
   onSettingsChange: (settings: FormatSettings) => void;
+  sidebarMode?: boolean; // 新增：是否使用侧边栏模式
 }
 
 const FormatSettingsPanel: React.FC<FormatSettingsProps> = ({
@@ -97,6 +98,7 @@ const FormatSettingsPanel: React.FC<FormatSettingsProps> = ({
   onClose,
   settings,
   onSettingsChange,
+  sidebarMode = false,
 }) => {
   const [activeTab, setActiveTab] = useState<'paragraph' | 'heading'>('paragraph');
 
@@ -232,6 +234,121 @@ const FormatSettingsPanel: React.FC<FormatSettingsProps> = ({
 
   if (!visible) return null;
 
+  // 侧边栏模式：直接返回面板内容
+  if (sidebarMode) {
+    return (
+      <div className="format-settings-sidebar">
+        <div className="format-settings-header">
+          <Type size={16} />
+          <span>排版设置</span>
+        </div>
+
+        <div className="format-settings-tabs">
+          <button
+            className={activeTab === 'paragraph' ? 'active' : ''}
+            onClick={() => setActiveTab('paragraph')}
+          >
+            正文段落
+          </button>
+          <button
+            className={activeTab === 'heading' ? 'active' : ''}
+            onClick={() => setActiveTab('heading')}
+          >
+            标题样式
+          </button>
+        </div>
+
+        <div className="format-settings-content">
+          {activeTab === 'paragraph' && (
+            <div className="paragraph-settings">
+              <div className="settings-row">
+                <div className="setting-field">
+                  <label>字体</label>
+                  <select
+                    value={settings.paragraph.fontFamily}
+                    onChange={(e) => updateParagraph({ fontFamily: e.target.value })}
+                  >
+                    {fontFamilies.map((f) => (
+                      <option key={f} value={f}>{f}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="setting-field">
+                  <label>字号</label>
+                  <select
+                    value={settings.paragraph.fontSize}
+                    onChange={(e) => updateParagraph({ fontSize: Number(e.target.value) })}
+                  >
+                    {fontSizes.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="settings-row">
+                <div className="setting-field">
+                  <label>行间距</label>
+                  <select
+                    value={settings.paragraph.lineHeight}
+                    onChange={(e) => updateParagraph({ lineHeight: Number(e.target.value) })}
+                  >
+                    <option value={1}>单倍</option>
+                    <option value={1.15}>1.15倍</option>
+                    <option value={1.5}>1.5倍</option>
+                    <option value={2}>2倍</option>
+                  </select>
+                </div>
+                <div className="setting-field">
+                  <label>段落间距</label>
+                  <div className="number-input">
+                    <input
+                      type="number"
+                      value={settings.paragraph.paragraphSpacing}
+                      onChange={(e) => updateParagraph({ paragraphSpacing: Number(e.target.value) })}
+                      min={0}
+                      max={72}
+                    />
+                    <span>磅</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="settings-row">
+                <div className="setting-field">
+                  <label>首行缩进</label>
+                  <div className="number-input">
+                    <input
+                      type="number"
+                      value={settings.paragraph.firstLineIndent}
+                      onChange={(e) => updateParagraph({ firstLineIndent: Number(e.target.value) })}
+                      min={0}
+                      max={10}
+                    />
+                    <span>字符</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'heading' && (
+            <div className="heading-settings">
+              {[1, 2, 3, 4].map((level) => renderHeadingSettings(level as 1 | 2 | 3 | 4))}
+            </div>
+          )}
+        </div>
+
+        <div className="format-settings-footer">
+          <button className="reset-btn" onClick={() => onSettingsChange(defaultFormatSettings)}>
+            恢复默认
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // 模态框模式（原有逻辑）
   return (
     <div className="format-settings-overlay" onClick={onClose}>
       <div className="format-settings-panel" onClick={(e) => e.stopPropagation()}>

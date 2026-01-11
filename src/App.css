@@ -88,6 +88,10 @@
   min-width: 200px;
 }
 
+.format-sidebar-panel {
+  min-width: 200px;
+}
+
 /* 分隔条 */
 .panel-resizer {
   width: 4px;
