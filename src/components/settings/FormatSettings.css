@@ -4,7 +4,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--bg-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -15,8 +15,8 @@
 .format-settings-sidebar {
   width: 100%;
   height: 100%;
-  background: #252526;
-  color: #cccccc;
+  background: var(--sidebar-bg);
+  color: var(--text-secondary);
   display: flex;
   flex-direction: column;
 }
@@ -25,8 +25,8 @@
   width: 360px;
   max-width: 90vw;
   max-height: 80vh;
-  background: #252526;
-  color: #cccccc;
+  background: var(--sidebar-bg);
+  color: var(--text-secondary);
   display: flex;
   flex-direction: column;
   border-radius: 8px;
@@ -50,26 +50,27 @@
   align-items: center;
   gap: 8px;
   padding: 12px 16px;
-  background: #2d2d2d;
-  border-bottom: 1px solid #3c3c3c;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-primary);
   min-height: 35px;
   max-height: 35px;
 }
 
 .format-settings-header svg:first-child {
-  color: #667eea;
+  color: var(--accent-primary);
 }
 
 .format-settings-header span {
   flex: 1;
   font-size: 13px;
   font-weight: 500;
+  color: var(--text-primary);
 }
 
 .format-settings-header .close-btn {
   background: none;
   border: none;
-  color: #888;
+  color: var(--text-muted);
   cursor: pointer;
   padding: 4px;
   display: flex;
@@ -80,13 +81,13 @@
 }
 
 .format-settings-header .close-btn:hover {
-  background: #3c3c3c;
-  color: #fff;
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .format-settings-tabs {
   display: flex;
-  border-bottom: 1px solid #3c3c3c;
+  border-bottom: 1px solid var(--border-primary);
 }
 
 .format-settings-tabs button {
@@ -94,7 +95,7 @@
   padding: 10px 16px;
   background: none;
   border: none;
-  color: #888;
+  color: var(--text-muted);
   font-size: 12px;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -102,13 +103,13 @@
 }
 
 .format-settings-tabs button:hover {
-  color: #ccc;
-  background: #2d2d2d;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
 }
 
 .format-settings-tabs button.active {
-  color: #667eea;
-  border-bottom-color: #667eea;
+  color: var(--accent-primary);
+  border-bottom-color: var(--accent-primary);
 }
 
 .format-settings-content {
@@ -132,7 +133,7 @@
 
 .setting-field label {
   font-size: 11px;
-  color: #999;
+  color: var(--text-tertiary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -140,10 +141,10 @@
 .setting-field select,
 .setting-field input {
   padding: 8px 10px;
-  background: #3c3c3c;
-  border: 1px solid #4a4a4a;
+  background: var(--bg-hover);
+  border: 1px solid var(--border-secondary);
   border-radius: 4px;
-  color: #ccc;
+  color: var(--text-secondary);
   font-size: 12px;
   outline: none;
   transition: all 0.15s ease;
@@ -151,13 +152,18 @@
 
 .setting-field select:hover,
 .setting-field input:hover {
-  border-color: #555;
+  border-color: var(--border-hover);
 }
 
 .setting-field select:focus,
 .setting-field input:focus {
-  border-color: #667eea;
-  background: #404040;
+  border-color: var(--accent-primary);
+  background: var(--bg-active);
+}
+
+.setting-field select option {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
 }
 
 .number-input {
@@ -173,7 +179,7 @@
 
 .number-input span {
   font-size: 11px;
-  color: #888;
+  color: var(--text-muted);
 }
 
 .alignment-buttons {
@@ -183,9 +189,9 @@
 
 .alignment-buttons button {
   padding: 6px 8px;
-  background: #3c3c3c;
-  border: 1px solid #4a4a4a;
-  color: #888;
+  background: var(--bg-hover);
+  border: 1px solid var(--border-secondary);
+  color: var(--text-muted);
   cursor: pointer;
   transition: all 0.15s ease;
   display: flex;
@@ -202,19 +208,19 @@
 }
 
 .alignment-buttons button:hover {
-  background: #454545;
-  color: #ccc;
+  background: var(--bg-active);
+  color: var(--text-secondary);
 }
 
 .alignment-buttons button.active {
-  background: #667eea;
-  border-color: #667eea;
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
   color: #fff;
 }
 
 /* 标题设置组 */
 .heading-group {
-  background: #2d2d2d;
+  background: var(--bg-tertiary);
   border-radius: 6px;
   padding: 12px;
   margin-bottom: 12px;
@@ -223,10 +229,10 @@
 .heading-group-title {
   font-size: 12px;
   font-weight: 600;
-  color: #ccc;
+  color: var(--text-secondary);
   margin-bottom: 12px;
   padding-bottom: 8px;
-  border-bottom: 1px solid #3c3c3c;
+  border-bottom: 1px solid var(--border-primary);
 }
 
 .heading-settings {
@@ -236,32 +242,32 @@
 
 /* 段落设置 */
 .paragraph-settings {
-  background: #2d2d2d;
+  background: var(--bg-tertiary);
   border-radius: 6px;
   padding: 12px;
 }
 
 .format-settings-footer {
   padding: 12px 16px;
-  border-top: 1px solid #3c3c3c;
+  border-top: 1px solid var(--border-primary);
   display: flex;
   justify-content: flex-end;
 }
 
 .reset-btn {
   padding: 8px 16px;
-  background: #3c3c3c;
-  border: 1px solid #4a4a4a;
+  background: var(--bg-hover);
+  border: 1px solid var(--border-secondary);
   border-radius: 4px;
-  color: #ccc;
+  color: var(--text-secondary);
   font-size: 12px;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .reset-btn:hover {
-  background: #454545;
-  border-color: #555;
+  background: var(--bg-active);
+  border-color: var(--border-hover);
 }
 
 /* 滚动条样式 */
@@ -274,10 +280,10 @@
 }
 
 .format-settings-content::-webkit-scrollbar-thumb {
-  background: #4a4a4a;
+  background: var(--scrollbar-thumb);
   border-radius: 3px;
 }
 
 .format-settings-content::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: var(--scrollbar-thumb-hover);
 }
