@@ -1,5 +1,5 @@
-import React, { useRef, useImperativeHandle, forwardRef, useMemo } from 'react';
-import { Code, Copy, Check, CheckCircle, XCircle } from 'lucide-react';
+import React, { useRef, useImperativeHandle, forwardRef, useMemo, useState } from 'react';
+import { Code, Copy, Check, CheckCircle, XCircle, Image } from 'lucide-react';
 import './MarkdownEditor.css';
 
 // 编辑修改项接口
@@ -24,6 +24,8 @@ interface MarkdownEditorProps {
   onRejectChange?: (index: number) => void;
   onAcceptAll?: () => void;
   onRejectAll?: () => void;
+  // 图片插入相关
+  onInsertImage?: (relativePath: string, alt?: string) => void;
 }
 
 // 将内容分割成段落，标记哪些需要显示 diff
@@ -44,8 +46,10 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(({
   onRejectChange,
   onAcceptAll,
   onRejectAll,
+  onInsertImage,
 }, ref) => {
   const [copied, setCopied] = React.useState(false);
+  const [insertingImage, setInsertingImage] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lineNumbersRef = useRef<HTMLDivElement>(null);
   const editorContainerRef = useRef<HTMLDivElement>(null);
@@ -92,6 +96,55 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(({
       await navigator.clipboard.writeText(value);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleInsertImage = async () => {
+    if (!window.electronAPI) {
+      alert('Electron API 不可用，请在桌面应用中使用此功能');
+      return;
+    }
+
+    setInsertingImage(true);
+    try {
+      const result = await window.electronAPI.selectAndSaveImage();
+      if (result.success && result.relativePath) {
+        // 获取当前光标位置
+        const textarea = textareaRef.current;
+        const start = textarea?.selectionStart || value.length;
+        const end = textarea?.selectionEnd || value.length;
+
+        // 获取图片文件名作为默认 alt 文本
+        const fileName = result.relativePath.split('/').pop() || '';
+        const altText = fileName.replace(/\.[^/.]+$/, ''); // 移除扩展名
+
+        // 构建 Markdown 图片语法
+        const imageMarkdown = `![${altText}](${result.relativePath})`;
+
+        // 插入到文本中
+        const newValue =
+          value.substring(0, start) + imageMarkdown + value.substring(end);
+        onChange(newValue);
+
+        // 设置光标位置到插入的图片后面
+        setTimeout(() => {
+          if (textarea) {
+            const newPosition = start + imageMarkdown.length;
+            textarea.setSelectionRange(newPosition, newPosition);
+            textarea.focus();
+          }
+        }, 0);
+
+        // 调用回调通知父组件
+        if (onInsertImage) {
+          onInsertImage(result.relativePath, altText);
+        }
+      }
+    } catch (error: any) {
+      console.error('插入图片失败:', error);
+      alert(`插入图片失败: ${error.message}`);
+    } finally {
+      setInsertingImage(false);
     }
   };
 
@@ -162,7 +215,16 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(({
             <span>Markdown 编辑器</span>
           </div>
           <div className="editor-actions">
-            <button 
+            <button
+              className="editor-action-btn"
+              onClick={handleInsertImage}
+              disabled={disabled || insertingImage}
+              title="插入图片"
+            >
+              <Image size={14} />
+              {insertingImage ? '插入中...' : '图片'}
+            </button>
+            <button
               className="editor-action-btn"
               onClick={handleCopy}
               disabled={!value}

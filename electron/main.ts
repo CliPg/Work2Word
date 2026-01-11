@@ -1,6 +1,7 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, protocol, net } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs/promises';
+import { constants as fsConstants } from 'fs';
 import { autoUpdater } from 'electron-updater';
 import { processFile, convertToFormat } from './fileProcessor';
 import { callLLM, processHomework, ProcessStepResult, HomeworkProcessResult, editContent } from './services/llmService';
@@ -171,6 +172,53 @@ function setupAutoUpdater() {
 }
 
 app.whenReady().then(() => {
+  // 注册自定义协议来处理本地图片
+  protocol.handle('work2word-local', async (request) => {
+    try {
+      // 从 URL 中提取文件名
+      const url = request.url;
+      const fileName = url.replace('work2word-local://', '');
+
+      // 构建图片的完整路径
+      const documentsPath = app.getPath('documents');
+      const imagePath = path.join(documentsPath, 'Work2Word_Assets', 'images', fileName);
+
+      // 检查文件是否存在
+      try {
+        await fs.access(imagePath, fsConstants.R_OK);
+      } catch {
+        // 文件不存在，返回 404
+        return new Response('Not Found', { status: 404, headers: { 'Content-Type': 'text/plain' } });
+      }
+
+      // 读取图片文件
+      const imageBuffer = await fs.readFile(imagePath);
+
+      // 根据文件扩展名确定 MIME 类型
+      const ext = path.extname(fileName).toLowerCase();
+      const mimeTypes: Record<string, string> = {
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.gif': 'image/gif',
+        '.webp': 'image/webp',
+        '.bmp': 'image/bmp',
+      };
+      const contentType = mimeTypes[ext] || 'image/png';
+
+      // 返回图片数据
+      return new Response(imageBuffer, {
+        headers: {
+          'Content-Type': contentType,
+          'Cache-Control': 'public, max-age=3600',
+        },
+      });
+    } catch (error) {
+      console.error('加载本地图片失败:', error);
+      return new Response('Internal Server Error', { status: 500, headers: { 'Content-Type': 'text/plain' } });
+    }
+  });
+
   createWindow();
   
   // 启动自动更新检查
@@ -341,5 +389,62 @@ ipcMain.handle('check-for-updates', async () => {
 // 获取应用版本
 ipcMain.handle('get-app-version', () => {
   return app.getVersion();
+});
+
+// 选择并保存图片
+ipcMain.handle('select-and-save-image', async () => {
+  if (!mainWindow) return { success: false, error: '窗口不可用' };
+
+  try {
+    // 获取用户文档目录
+    const documentsPath = app.getPath('documents');
+    const assetsDir = path.join(documentsPath, 'Work2Word_Assets', 'images');
+
+    // 确保目录存在
+    await fs.mkdir(assetsDir, { recursive: true });
+
+    // 打开文件选择对话框
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openFile'],
+      filters: [
+        { name: '图片文件', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'] },
+        { name: 'PNG', extensions: ['png'] },
+        { name: 'JPEG', extensions: ['jpg', 'jpeg'] },
+        { name: 'GIF', extensions: ['gif'] },
+        { name: 'WebP', extensions: ['webp'] },
+        { name: 'BMP', extensions: ['bmp'] },
+      ],
+    });
+
+    if (result.canceled || result.filePaths.length === 0) {
+      return { success: false, canceled: true };
+    }
+
+    const sourcePath = result.filePaths[0];
+    const fileName = path.basename(sourcePath);
+    const destPath = path.join(assetsDir, fileName);
+
+    // 检查文件是否已存在，如果存在则添加时间戳
+    let finalDestPath = destPath;
+    try {
+      await fs.access(destPath);
+      const ext = path.extname(fileName);
+      const nameWithoutExt = path.basename(fileName, ext);
+      const timestamp = Date.now();
+      finalDestPath = path.join(assetsDir, `${nameWithoutExt}_${timestamp}${ext}`);
+    } catch {
+      // 文件不存在，使用原路径
+    }
+
+    // 复制图片到 assets 目录
+    await fs.copyFile(sourcePath, finalDestPath);
+
+    // 返回相对路径
+    const relativePath = `./assets/images/${path.basename(finalDestPath)}`;
+    return { success: true, relativePath, fullPath: finalDestPath };
+  } catch (error: any) {
+    console.error('保存图片失败:', error);
+    return { success: false, error: error.message };
+  }
 });
 

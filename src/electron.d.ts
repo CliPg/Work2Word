@@ -52,6 +52,8 @@ declare global {
       // 设置相关
       saveSettings: (settings: any) => Promise<{ success: boolean; error?: string }>;
       loadSettings: () => Promise<{ success: boolean; settings?: any; error?: string }>;
+      // 图片相关
+      selectAndSaveImage: () => Promise<{ success: boolean; canceled?: boolean; relativePath?: string; fullPath?: string; error?: string }>;
     };
   }
 }

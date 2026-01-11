@@ -24,6 +24,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // 更新相关
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  // 图片相关
+  selectAndSaveImage: () => ipcRenderer.invoke('select-and-save-image'),
 });
 
 declare global {
@@ -41,6 +43,7 @@ declare global {
       loadSettings: () => Promise<any>;
       checkForUpdates: () => Promise<any>;
       getAppVersion: () => Promise<string>;
+      selectAndSaveImage: () => Promise<{ success: boolean; canceled?: boolean; relativePath?: string; fullPath?: string; error?: string }>;
     };
   }
 }

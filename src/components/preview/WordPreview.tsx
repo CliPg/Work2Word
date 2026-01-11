@@ -1,5 +1,5 @@
 import React, { useRef, useImperativeHandle, forwardRef } from 'react';
-import { FileText, Loader2, FileCode, File } from 'lucide-react';
+import { FileText, Loader2, FileCode, File, ImageOff } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -58,6 +58,73 @@ const fontFamilyMap: Record<string, string> = {
 // 获取完整的 CSS 字体栈
 const getFontStack = (fontName: string): string => {
   return fontFamilyMap[fontName] || `"${fontName}", sans-serif`;
+};
+
+// 自定义图片组件
+const CustomImage = ({ src, alt, ...props }: React.ImgHTMLAttributes<HTMLImageElement>) => {
+  const [error, setError] = React.useState(false);
+  const [loading, setLoading] = React.useState(true);
+
+  // 处理相对路径的图片
+  const getImageSrc = (src: string): string => {
+    if (!src) return '';
+
+    // 如果是 ./assets/images/ 开头的相对路径，转换为完整的文件路径
+    if (src.startsWith('./assets/images/') || src.startsWith('assets/images/')) {
+      const fileName = src.split('/').pop() || '';
+      // 在 Electron 环境中，使用用户文档目录
+      if (window.electronAPI) {
+        // 使用特殊的协议来标记需要通过 Electron 处理的图片
+        return `work2word-local://${fileName}`;
+      }
+      // 开发环境中的回退处理
+      return src;
+    }
+
+    // 如果是 http/https URL，直接返回
+    if (src.startsWith('http://') || src.startsWith('https://')) {
+      return src;
+    }
+
+    // 其他情况，返回原始路径
+    return src;
+  };
+
+  const imageSrc = getImageSrc(src || '');
+
+  const handleError = () => {
+    setError(true);
+    setLoading(false);
+  };
+
+  const handleLoad = () => {
+    setLoading(false);
+  };
+
+  // 如果图片加载失败，显示占位符
+  if (error) {
+    return (
+      <div className="image-error" title={`图片加载失败: ${alt || src}`}>
+        <ImageOff size={24} />
+        <span>{alt || '图片'}</span>
+        <small>{src}</small>
+      </div>
+    );
+  }
+
+  return (
+    <div className="markdown-image-wrapper">
+      {loading && <div className="image-loading">加载中...</div>}
+      <img
+        src={imageSrc}
+        alt={alt}
+        loading="lazy"
+        onError={handleError}
+        onLoad={handleLoad}
+        {...props}
+      />
+    </div>
+  );
 };
 
 const WordPreview = forwardRef<WordPreviewHandle, WordPreviewProps>(({
@@ -181,6 +248,9 @@ const WordPreview = forwardRef<WordPreviewHandle, WordPreviewProps>(({
               <ReactMarkdown
                 remarkPlugins={[remarkGfm, remarkMath]}
                 rehypePlugins={[rehypeKatex]}
+                components={{
+                  img: CustomImage,
+                }}
               >
                 {content}
               </ReactMarkdown>
