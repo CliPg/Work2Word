@@ -3,6 +3,8 @@ import MarkdownEditor, { MarkdownEditorHandle, EditChange } from './components/e
 import WordPreview, { WordPreviewHandle } from './components/preview/WordPreview';
 import Sidebar from './components/sidebar/Sidebar';
 import FormatSettingsPanel, { FormatSettings, defaultFormatSettings } from './components/settings/FormatSettings';
+import { ThemeProvider, useTheme } from './contexts/ThemeContext';
+import { Sun, Moon } from 'lucide-react';
 import './App.css';
 
 interface LLMConfigType {
@@ -612,6 +614,8 @@ function App() {
             <path d="M3 3h18v18H3V3zm16 16V5H5v14h14zM7 7h4v4H7V7zm0 6h4v4H7v-4zm6-6h4v2h-4V7zm0 4h4v2h-4v-2zm0 4h4v2h-4v-2z"/>
           </svg>
         </div>
+        {/* 主题切换按钮 */}
+        <ThemeToggleButton />
       </div>
 
       {/* 主内容区 */}
@@ -723,4 +727,30 @@ function App() {
   );
 }
 
-export default App;
+// 主题切换按钮组件
+function ThemeToggleButton() {
+  const { theme, toggleTheme } = useTheme();
+
+  return (
+    <div
+      className="activity-icon"
+      title={theme === 'light' ? '切换到黑夜模式' : '切换到白天模式'}
+      onClick={toggleTheme}
+    >
+      {theme === 'light' ? (
+        <Moon size={20} strokeWidth={2} />
+      ) : (
+        <Sun size={20} strokeWidth={2} />
+      )}
+    </div>
+  );
+}
+
+// 用 ThemeProvider 包装 App
+export default function AppWrapper() {
+  return (
+    <ThemeProvider>
+      <App />
+    </ThemeProvider>
+  );
+}

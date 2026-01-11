@@ -1,0 +1,161 @@
+/* ==================== 主题系统 ==================== */
+
+/* CSS 变量定义 - 黑夜模式（默认） */
+:root {
+  /* 主题标识 */
+  --theme-mode: 'dark';
+
+  /* 背景色 */
+  --bg-primary: #1e1e1e;
+  --bg-secondary: #252526;
+  --bg-tertiary: #2d2d30;
+  --bg-hover: #3c3c3c;
+  --bg-active: #404040;
+  --bg-overlay: rgba(0, 0, 0, 0.6);
+
+  /* 文本色 */
+  --text-primary: #d4d4d4;
+  --text-secondary: #cccccc;
+  --text-tertiary: #858585;
+  --text-muted: #666666;
+  --text-disabled: #555555;
+
+  /* 边框色 */
+  --border-primary: #3c3c3c;
+  --border-secondary: #4a4a4a;
+  --border-hover: #667eea;
+
+  /* 活动栏 */
+  --activity-bar-bg: #333333;
+  --activity-bar-icon: #858585;
+  --activity-bar-icon-hover: #ffffff;
+  --activity-bar-indicator: #667eea;
+
+  /* 状态栏 */
+  --status-bar-bg: #667eea;
+  --status-bar-text: #ffffff;
+
+  /* 强调色 */
+  --accent-primary: #667eea;
+  --accent-hover: #5568d3;
+  --accent-light: rgba(102, 126, 234, 0.2);
+  --accent-lighter: rgba(102, 126, 234, 0.1);
+
+  /* 功能色 */
+  --success-bg: rgba(35, 134, 54, 0.2);
+  --success-text: #3fb950;
+  --error-bg: rgba(248, 81, 73, 0.2);
+  --error-text: #f85149;
+  --warning-bg: rgba(187, 128, 9, 0.2);
+  --warning-text: #d29922;
+
+  /* 组件特定 */
+  --editor-bg: #1e1e1e;
+  --editor-header-bg: #252526;
+  --editor-text: #d4d4d4;
+  --editor-line-num: #858585;
+
+  --preview-bg: #252526;
+  --preview-paper: #2d2d30;
+
+  --sidebar-bg: #252526;
+
+  --button-bg: transparent;
+  --button-hover: #3c3c3c;
+  --button-text: #cccccc;
+
+  --input-bg: #3c3c3c;
+  --input-text: #d4d4d4;
+  --input-border: #4a4a4a;
+  --input-placeholder: #858585;
+
+  /* 滚动条 */
+  --scrollbar-track: #252526;
+  --scrollbar-thumb: #4a4a4a;
+  --scrollbar-thumb-hover: #5a5a5a;
+}
+
+/* 白天模式 */
+[data-theme="light"] {
+  /* 主题标识 */
+  --theme-mode: 'light';
+
+  /* 背景色 */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --bg-tertiary: #f0f0f0;
+  --bg-hover: #e8e8e8;
+  --bg-active: #e0e0e0;
+  --bg-overlay: rgba(0, 0, 0, 0.4);
+
+  /* 文本色 */
+  --text-primary: #1d1d1f;
+  --text-secondary: #333333;
+  --text-tertiary: #666666;
+  --text-muted: #858585;
+  --text-disabled: #a0a0a0;
+
+  /* 边框色 */
+  --border-primary: #e0e0e0;
+  --border-secondary: #d0d0d0;
+  --border-hover: #667eea;
+
+  /* 活动栏 */
+  --activity-bar-bg: #e8e8e8;
+  --activity-bar-icon: #666666;
+  --activity-bar-icon-hover: #1d1d1f;
+  --activity-bar-indicator: #667eea;
+
+  /* 状态栏 */
+  --status-bar-bg: #667eea;
+  --status-bar-text: #ffffff;
+
+  /* 强调色（保持一致） */
+  --accent-primary: #667eea;
+  --accent-hover: #5568d3;
+  --accent-light: rgba(102, 126, 234, 0.15);
+  --accent-lighter: rgba(102, 126, 234, 0.08);
+
+  /* 功能色 */
+  --success-bg: rgba(35, 134, 54, 0.15);
+  --success-text: #2da44e;
+  --error-bg: rgba(248, 81, 73, 0.15);
+  --error-text: #cf222e;
+  --warning-bg: rgba(187, 128, 9, 0.15);
+  --warning-text: #9a6700;
+
+  /* 组件特定 */
+  --editor-bg: #ffffff;
+  --editor-header-bg: #f8f9fa;
+  --editor-text: #1d1d1f;
+  --editor-line-num: #999999;
+
+  --preview-bg: #f8f9fa;
+  --preview-paper: #ffffff;
+
+  --sidebar-bg: #f8f9fa;
+
+  --button-bg: transparent;
+  --button-hover: #e8e8e8;
+  --button-text: #333333;
+
+  --input-bg: #ffffff;
+  --input-text: #1d1d1f;
+  --input-border: #d0d0d0;
+  --input-placeholder: #999999;
+
+  /* 滚动条 */
+  --scrollbar-track: #f0f0f0;
+  --scrollbar-thumb: #c0c0c0;
+  --scrollbar-thumb-hover: #a0a0a0;
+}
+
+/* 主题切换过渡效果 */
+* {
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+/* 排除不需要过渡的元素 */
+*:not(img):not(video):not(canvas) {
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
