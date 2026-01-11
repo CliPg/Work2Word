@@ -9,7 +9,7 @@
   Work2Word
 </h1>
 
-一个简洁美观的跨平台AI应用程序，用Markdown编辑文本，Word渲染，支持导出word、pdf、md。可根据上传文件和提示词生成和编辑md文本。软件开发的起因是大学时要写太多的报告、不断调整Word格式。
+一个简洁美观的跨平台AI应用程序，用Markdown编辑文本，Word渲染，支持导出word、pdf、md。可根据上传文件和提示词生成和编辑md文本。软件开发的起因是大学时不仅要写一大堆的报告、还要不断调整Word格式，为提高效率，遂开发此软件。
 
 > [!TIP]
 > 目前还需要自行配置api开启AI对话功能。
@@ -160,3 +160,7 @@ src/
 - **Word 文档**: 使用 docx 库生成 .docx 文件，支持标题、粗体、斜体等格式
 - **PDF 文档**: 使用 Puppeteer 将 Markdown 渲染为 HTML 后转换为 PDF
 
+## To Be Expected
+
+- 文档中插入图片
+- 
