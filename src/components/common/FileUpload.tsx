@@ -44,6 +44,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, filePath, loading
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
       'application/pdf': ['.pdf'],
       'text/plain': ['.txt'],
+      'text/markdown': ['.md'],
     },
     noClick: true,
     disabled: loading,
@@ -85,7 +86,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, filePath, loading
             <p className="upload-text">
               {isDragActive ? '松开以上传文件' : '点击或拖拽文件到此处'}
             </p>
-            <p className="upload-hint">支持 DOC、DOCX、PDF、TXT 格式</p>
+            <p className="upload-hint">支持 DOC、DOCX、PDF、MD、TXT 格式</p>
           </div>
         )}
       </div>

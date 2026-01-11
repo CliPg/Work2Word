@@ -49,6 +49,7 @@ declare global {
       convertFile: (mdContent: string, format: 'doc' | 'pdf' | 'md', outputPath?: string, formatSettings?: any) => Promise<{ success: boolean; path?: string; buffer?: Buffer; error?: string }>;
       saveFileDialog: (defaultFilename: string) => Promise<{ canceled: boolean; filePath?: string }>;
       openFileDialog: () => Promise<{ canceled: boolean; filePath?: string }>;
+      openMarkdownFileDialog: () => Promise<{ canceled: boolean; filePath?: string }>;
       // 设置相关
       saveSettings: (settings: any) => Promise<{ success: boolean; error?: string }>;
       loadSettings: () => Promise<{ success: boolean; settings?: any; error?: string }>;

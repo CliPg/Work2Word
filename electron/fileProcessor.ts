@@ -13,7 +13,7 @@ export async function processFile(filePath: string): Promise<string> {
   try {
     // 检查文件是否存在
     await fs.access(filePath);
-    
+
     const ext = path.extname(filePath).toLowerCase();
     const buffer = await fs.readFile(filePath);
 
@@ -29,13 +29,14 @@ export async function processFile(filePath: string): Promise<string> {
       case '.pdf':
         return await processPdf(buffer);
       case '.txt':
+      case '.md':
         const text = buffer.toString('utf-8');
         if (!text.trim()) {
           throw new Error('文本文件内容为空');
         }
         return text;
       default:
-        throw new Error(`不支持的文件格式: ${ext}。支持格式: .doc, .docx, .pdf, .txt`);
+        throw new Error(`不支持的文件格式: ${ext}。支持格式: .doc, .docx, .pdf, .txt, .md`);
     }
   } catch (error: any) {
     if (error.code === 'ENOENT') {

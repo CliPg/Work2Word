@@ -337,21 +337,41 @@ ipcMain.handle('save-file-dialog', async (_, defaultFilename: string) => {
 
 ipcMain.handle('open-file-dialog', async () => {
   if (!mainWindow) return { canceled: true };
-  
+
   const result = await dialog.showOpenDialog(mainWindow, {
     properties: ['openFile'],
     filters: [
-      { name: '文档文件', extensions: ['doc', 'docx', 'pdf', 'txt'] },
+      { name: '文档文件', extensions: ['doc', 'docx', 'pdf', 'txt', 'md'] },
       { name: 'Word 文档', extensions: ['doc', 'docx'] },
       { name: 'PDF 文档', extensions: ['pdf'] },
+      { name: 'Markdown', extensions: ['md'] },
       { name: '文本文件', extensions: ['txt'] },
     ],
   });
-  
+
   if (result.canceled || result.filePaths.length === 0) {
     return { canceled: true };
   }
-  
+
+  return { canceled: false, filePath: result.filePaths[0] };
+});
+
+// 打开 Markdown 文件对话框（只显示 MD 文件）
+ipcMain.handle('open-markdown-file-dialog', async () => {
+  if (!mainWindow) return { canceled: true };
+
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openFile'],
+    filters: [
+      { name: 'Markdown 文件', extensions: ['md'] },
+      { name: '所有文件', extensions: ['*'] },
+    ],
+  });
+
+  if (result.canceled || result.filePaths.length === 0) {
+    return { canceled: true };
+  }
+
   return { canceled: false, filePath: result.filePaths[0] };
 });
 

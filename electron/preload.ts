@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveFileDialog: (defaultFilename: string) =>
     ipcRenderer.invoke('save-file-dialog', defaultFilename),
   openFileDialog: () => ipcRenderer.invoke('open-file-dialog'),
+  openMarkdownFileDialog: () => ipcRenderer.invoke('open-markdown-file-dialog'),
   // 设置相关
   saveSettings: (settings: any) => ipcRenderer.invoke('save-settings', settings),
   loadSettings: () => ipcRenderer.invoke('load-settings'),
@@ -39,6 +40,7 @@ declare global {
       convertFile: (mdContent: string, format: 'doc' | 'pdf' | 'md', outputPath?: string, formatSettings?: any) => Promise<any>;
       saveFileDialog: (defaultFilename: string) => Promise<any>;
       openFileDialog: () => Promise<any>;
+      openMarkdownFileDialog: () => Promise<{ canceled: boolean; filePath?: string }>;
       saveSettings: (settings: any) => Promise<any>;
       loadSettings: () => Promise<any>;
       checkForUpdates: () => Promise<any>;

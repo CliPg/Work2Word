@@ -1,5 +1,5 @@
 import React, { useRef, useImperativeHandle, forwardRef, useMemo, useState } from 'react';
-import { Code, Copy, Check, CheckCircle, XCircle, Image } from 'lucide-react';
+import { Code, Copy, Check, CheckCircle, XCircle, Image, FileUp } from 'lucide-react';
 import './MarkdownEditor.css';
 
 // 编辑修改项接口
@@ -50,6 +50,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(({
 }, ref) => {
   const [copied, setCopied] = React.useState(false);
   const [insertingImage, setInsertingImage] = useState(false);
+  const [importingFile, setImportingFile] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lineNumbersRef = useRef<HTMLDivElement>(null);
   const editorContainerRef = useRef<HTMLDivElement>(null);
@@ -148,6 +149,46 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(({
     }
   };
 
+  const handleImportFile = async () => {
+    if (!window.electronAPI) {
+      alert('Electron API 不可用，请在桌面应用中使用此功能');
+      return;
+    }
+
+    setImportingFile(true);
+    try {
+      const result = await window.electronAPI.openMarkdownFileDialog();
+      if (!result.canceled && result.filePath) {
+        // 调用 processFile 来读取文件内容
+        const fileResult = await window.electronAPI.processFile(result.filePath);
+        if (fileResult.success && fileResult.content) {
+          const content = fileResult.content;
+          // 如果编辑器已有内容，询问是否追加
+          if (value.trim() && value.trim() !== content.trim()) {
+            const shouldAppend = confirm('编辑器已有内容，是否要追加导入的内容？\n\n点击"确定"追加内容，点击"取消"替换现有内容。');
+            if (shouldAppend) {
+              // 追加内容：在现有内容后添加两个换行符，然后添加新内容
+              onChange(value + '\n\n' + content);
+            } else {
+              // 替换内容
+              onChange(content);
+            }
+          } else {
+            // 编辑器为空或内容相同，直接设置
+            onChange(content);
+          }
+        } else if (fileResult.error) {
+          alert(`导入文件失败: ${fileResult.error}`);
+        }
+      }
+    } catch (error: any) {
+      console.error('导入文件失败:', error);
+      alert(`导入文件失败: ${error.message}`);
+    } finally {
+      setImportingFile(false);
+    }
+  };
+
   // 计算内容段落，标记需要修改的部分
   const segments = useMemo((): ContentSegment[] => {
     if (pendingChanges.length === 0) {
@@ -217,12 +258,21 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(({
           <div className="editor-actions">
             <button
               className="editor-action-btn"
+              onClick={handleImportFile}
+              disabled={disabled || importingFile}
+              title="导入文件"
+            >
+              <FileUp size={14} />
+              {importingFile ? '导入中...' : '导入'}
+            </button>
+            <button
+              className="editor-action-btn"
               onClick={handleInsertImage}
               disabled={disabled || insertingImage}
               title="插入图片"
             >
               <Image size={14} />
-              {insertingImage ? '插入中...' : '插入图片'}
+              {insertingImage ? '插入中...' : '图片'}
             </button>
             <button
               className="editor-action-btn"
