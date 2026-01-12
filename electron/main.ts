@@ -298,11 +298,65 @@ ipcMain.handle('save-debug-data', async (_, data: ProcessStepResult, filename: s
 ipcMain.handle('convert-file', async (_, mdContent: string, format: 'doc' | 'pdf' | 'md', outputPath?: string, formatSettings?: any) => {
   try {
     const result = await convertToFormat(mdContent, format, outputPath, formatSettings);
+    
+    // 如果是 PDF 格式，使用 Electron 的 printToPDF
+    if (format === 'pdf' && result.html) {
+      const pdfBuffer = await generatePdfFromHtml(result.html);
+      await fs.writeFile(result.path, pdfBuffer);
+      return { success: true, path: result.path, buffer: pdfBuffer };
+    }
+    
     return { success: true, ...result };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
 });
+
+// 使用隐藏窗口生成 PDF
+async function generatePdfFromHtml(html: string): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const pdfWindow = new BrowserWindow({
+      width: 794, // A4 宽度 (72dpi)
+      height: 1123, // A4 高度 (72dpi)
+      show: false,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+      },
+    });
+
+    pdfWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+
+    pdfWindow.webContents.on('did-finish-load', async () => {
+      try {
+        // 等待一小段时间确保渲染完成
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        const pdfBuffer = await pdfWindow.webContents.printToPDF({
+          printBackground: true,
+          pageSize: 'A4',
+          margins: {
+            top: 0,
+            bottom: 0,
+            left: 0,
+            right: 0,
+          },
+        });
+        
+        pdfWindow.close();
+        resolve(Buffer.from(pdfBuffer));
+      } catch (error) {
+        pdfWindow.close();
+        reject(error);
+      }
+    });
+
+    pdfWindow.webContents.on('did-fail-load', (_, errorCode, errorDescription) => {
+      pdfWindow.close();
+      reject(new Error(`加载 HTML 失败: ${errorDescription} (${errorCode})`));
+    });
+  });
+}
 
 ipcMain.handle('save-file-dialog', async (_, defaultFilename: string) => {
   if (!mainWindow) return { canceled: true };

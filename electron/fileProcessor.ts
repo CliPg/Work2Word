@@ -3,7 +3,6 @@ import * as path from 'path';
 import mammoth from 'mammoth';
 import pdfParse from 'pdf-parse';
 import WordExtractor from 'word-extractor';
-import PDFDocument from 'pdfkit';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle, ImageRun, Media } from 'docx';
 import { marked } from 'marked';
 
@@ -1135,7 +1134,7 @@ export async function convertToFormat(
   format: 'doc' | 'pdf' | 'md',
   outputPath?: string,
   formatSettings?: FormatSettings
-): Promise<{ path: string; buffer?: Buffer }> {
+): Promise<{ path: string; buffer?: Buffer; html?: string }> {
   if (format === 'md') {
     const filePath = outputPath || `output_${Date.now()}.md`;
     await fs.writeFile(filePath, mdContent, 'utf-8');
@@ -1166,131 +1165,117 @@ export async function convertToFormat(
 
   if (format === 'pdf') {
     try {
-      // 使用 pdfkit 将 Markdown 转换为 PDF
-      const doc = new PDFDocument({
-        size: 'A4',
-        margins: { top: 50, bottom: 50, left: 50, right: 50 },
-        info: {
-          Title: 'Work2Word Export',
-          Author: 'Work2Word',
-        },
-      });
-
-      // 注册中文字体 (使用系统字体)
-      const fontPath = '/System/Library/Fonts/PingFang.ttc';
-      try {
-        doc.registerFont('Chinese', fontPath);
-      } catch {
-        // 如果系统字体不可用，使用默认字体
-      }
-
-      const chunks: Buffer[] = [];
-      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
-
-      const pdfPromise = new Promise<Buffer>((resolve, reject) => {
-        doc.on('end', () => resolve(Buffer.concat(chunks)));
-        doc.on('error', reject);
-      });
-
-      // 解析 Markdown 并写入 PDF
-      const lines = mdContent.split('\n');
-      let inCodeBlock = false;
-      let codeContent = '';
-
-      for (const line of lines) {
-        // 代码块处理
-        if (line.startsWith('```')) {
-          if (inCodeBlock) {
-            // 结束代码块
-            doc.font('Courier').fontSize(10).fillColor('#333');
-            doc.rect(doc.x - 5, doc.y - 5, 500, doc.heightOfString(codeContent, { width: 490 }) + 10)
-              .fill('#f5f5f5');
-            doc.fillColor('#333').text(codeContent, { width: 490 });
-            doc.moveDown(0.5);
-            codeContent = '';
-            inCodeBlock = false;
-          } else {
-            inCodeBlock = true;
-          }
-          continue;
-        }
-
-        if (inCodeBlock) {
-          codeContent += line + '\n';
-          continue;
-        }
-
-        // 空行
-        if (!line.trim()) {
-          doc.moveDown(0.5);
-          continue;
-        }
-
-        // 标题
-        if (line.startsWith('# ')) {
-          try { doc.font('Chinese'); } catch { doc.font('Helvetica-Bold'); }
-          doc.fontSize(24).fillColor('#333').text(line.slice(2), { align: 'left' });
-          doc.moveDown(0.5);
-          continue;
-        }
-        if (line.startsWith('## ')) {
-          try { doc.font('Chinese'); } catch { doc.font('Helvetica-Bold'); }
-          doc.fontSize(20).fillColor('#333').text(line.slice(3), { align: 'left' });
-          doc.moveDown(0.5);
-          continue;
-        }
-        if (line.startsWith('### ')) {
-          try { doc.font('Chinese'); } catch { doc.font('Helvetica-Bold'); }
-          doc.fontSize(16).fillColor('#333').text(line.slice(4), { align: 'left' });
-          doc.moveDown(0.5);
-          continue;
-        }
-        if (line.startsWith('#### ')) {
-          try { doc.font('Chinese'); } catch { doc.font('Helvetica-Bold'); }
-          doc.fontSize(14).fillColor('#333').text(line.slice(5), { align: 'left' });
-          doc.moveDown(0.5);
-          continue;
-        }
-
-        // 列表项
-        if (line.match(/^[-*]\s/)) {
-          try { doc.font('Chinese'); } catch { doc.font('Helvetica'); }
-          doc.fontSize(12).fillColor('#333').text('• ' + line.slice(2), { indent: 20 });
-          continue;
-        }
-        if (line.match(/^\d+\.\s/)) {
-          try { doc.font('Chinese'); } catch { doc.font('Helvetica'); }
-          doc.fontSize(12).fillColor('#333').text(line, { indent: 20 });
-          continue;
-        }
-
-        // 引用
-        if (line.startsWith('> ')) {
-          try { doc.font('Chinese'); } catch { doc.font('Helvetica-Oblique'); }
-          doc.fontSize(12).fillColor('#666').text(line.slice(2), { indent: 20 });
-          continue;
-        }
-
-        // 普通段落 - 处理粗体和斜体
-        let text = line
-          .replace(/\*\*([^*]+)\*\*/g, '$1')  // 粗体简化处理
-          .replace(/\*([^*]+)\*/g, '$1')       // 斜体简化处理
-          .replace(/`([^`]+)`/g, '$1');        // 行内代码简化处理
-
-        try { doc.font('Chinese'); } catch { doc.font('Helvetica'); }
-        doc.fontSize(12).fillColor('#333').text(text, { align: 'justify', lineGap: 4 });
-      }
-
-      doc.end();
-
-      const pdfBuffer = await pdfPromise;
-      await fs.writeFile(filePath, pdfBuffer);
-      return { path: filePath, buffer: pdfBuffer };
+      // 生成 HTML 内容，由 main 进程使用 printToPDF 转换
+      const html = await generatePdfHtml(mdContent, formatSettings);
+      return { path: filePath, html };
     } catch (error: any) {
-      throw new Error(`转换 PDF 失败: ${error.message}`);
+      throw new Error(`生成 PDF HTML 失败: ${error.message}`);
     }
   }
 
   throw new Error(`不支持的输出格式: ${format}`);
+}
+
+// 生成用于 PDF 导出的 HTML
+async function generatePdfHtml(mdContent: string, formatSettings?: FormatSettings): Promise<string> {
+  const settings = formatSettings || defaultFormatSettings;
+  const fontFamily = settings.paragraph?.fontFamily || '宋体';
+  const fontSize = settings.paragraph?.fontSize || 12;
+  const lineHeight = settings.paragraph?.lineHeight || 1.5;
+
+  const h1FontFamily = settings.heading1?.fontFamily || '黑体';
+  const h1FontSize = settings.heading1?.fontSize || 22;
+  const h2FontFamily = settings.heading2?.fontFamily || '黑体';
+  const h2FontSize = settings.heading2?.fontSize || 18;
+  const h3FontFamily = settings.heading3?.fontFamily || '黑体';
+  const h3FontSize = settings.heading3?.fontSize || 16;
+  const h4FontFamily = settings.heading4?.fontFamily || '黑体';
+  const h4FontSize = settings.heading4?.fontSize || 14;
+
+  // 解析 Markdown 为 HTML
+  const bodyHtml = await marked.parse(mdContent);
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    @page {
+      size: A4;
+      margin: 2cm;
+    }
+    body {
+      font-family: "${fontFamily}", "PingFang SC", "Microsoft YaHei", "SimSun", sans-serif;
+      font-size: ${fontSize}pt;
+      line-height: ${lineHeight};
+      color: #333;
+      max-width: 100%;
+      padding: 0;
+      margin: 0;
+    }
+    h1 { font-family: "${h1FontFamily}", "PingFang SC", "Microsoft YaHei", sans-serif; font-size: ${h1FontSize}pt; margin: 16pt 0 12pt 0; font-weight: bold; }
+    h2 { font-family: "${h2FontFamily}", "PingFang SC", "Microsoft YaHei", sans-serif; font-size: ${h2FontSize}pt; margin: 14pt 0 10pt 0; font-weight: bold; }
+    h3 { font-family: "${h3FontFamily}", "PingFang SC", "Microsoft YaHei", sans-serif; font-size: ${h3FontSize}pt; margin: 12pt 0 8pt 0; font-weight: bold; }
+    h4 { font-family: "${h4FontFamily}", "PingFang SC", "Microsoft YaHei", sans-serif; font-size: ${h4FontSize}pt; margin: 10pt 0 6pt 0; font-weight: bold; }
+    h5, h6 { font-size: 12pt; margin: 8pt 0 4pt 0; font-weight: bold; }
+    p { margin: 8pt 0; text-align: justify; text-indent: ${settings.paragraph?.firstLineIndent || 2}em; }
+    ul, ol { margin: 8pt 0; padding-left: 24pt; }
+    li { margin: 4pt 0; }
+    li p { text-indent: 0; }
+    blockquote {
+      margin: 12pt 0;
+      padding: 8pt 16pt;
+      border-left: 4pt solid #ddd;
+      background: #f9f9f9;
+      color: #666;
+    }
+    blockquote p { text-indent: 0; }
+    code {
+      font-family: "Courier New", monospace;
+      background: #f5f5f5;
+      padding: 2pt 4pt;
+      border-radius: 3pt;
+      font-size: 90%;
+    }
+    pre {
+      background: #f5f5f5;
+      padding: 12pt;
+      border-radius: 4pt;
+      overflow-x: auto;
+      margin: 12pt 0;
+    }
+    pre code {
+      background: none;
+      padding: 0;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 12pt 0;
+    }
+    th, td {
+      border: 1pt solid #ddd;
+      padding: 8pt;
+      text-align: left;
+    }
+    th {
+      background: #f5f5f5;
+      font-weight: bold;
+    }
+    img {
+      max-width: 100%;
+      height: auto;
+    }
+    hr {
+      border: none;
+      border-top: 1pt solid #ddd;
+      margin: 16pt 0;
+    }
+  </style>
+</head>
+<body>
+${bodyHtml}
+</body>
+</html>`;
 }
 
