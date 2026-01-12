@@ -1,5 +1,6 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { app } from 'electron';
 import mammoth from 'mammoth';
 import pdfParse from 'pdf-parse';
 import WordExtractor from 'word-extractor';
@@ -1137,7 +1138,20 @@ export async function convertToFormat(
 ): Promise<{ path: string; buffer?: Buffer; html?: string }> {
   if (format === 'md') {
     const filePath = outputPath || `output_${Date.now()}.md`;
-    await fs.writeFile(filePath, mdContent, 'utf-8');
+
+    // 将相对路径转换为绝对路径
+    // 匹配 markdown 图片语法 ![alt](./assets/images/xxx.png)
+    const processedContent = mdContent.replace(
+      /!\[([^\]]*)\]\(\.\/assets\/images\/([^)]+)\)/g,
+      (match, alt, filename) => {
+        // 获取用户文档目录
+        const documentsPath = app.getPath('documents');
+        const absolutePath = path.join(documentsPath, 'Work2Word_Assets', 'images', filename);
+        return `![${alt}](${absolutePath})`;
+      }
+    );
+
+    await fs.writeFile(filePath, processedContent, 'utf-8');
     return { path: filePath };
   }
 
