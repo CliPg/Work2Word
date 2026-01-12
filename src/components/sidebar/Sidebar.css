@@ -265,6 +265,46 @@
   cursor: not-allowed;
 }
 
+/* 模式选择器 */
+.mode-selector-wrapper {
+  position: relative;
+}
+
+.mode-btn {
+  max-width: 140px;
+}
+
+.mode-btn .mode-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mode-dropdown {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 4px;
+  min-width: 180px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-secondary);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  z-index: 100;
+  overflow: hidden;
+}
+
+.mode-dropdown .dropdown-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.mode-dropdown .dropdown-option svg {
+  flex-shrink: 0;
+}
+
 /* 模型选择器 */
 .model-selector-wrapper {
   position: relative;

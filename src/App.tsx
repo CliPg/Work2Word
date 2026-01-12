@@ -7,6 +7,8 @@ import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { Sun, Moon } from 'lucide-react';
 import './App.css';
 
+type ModeType = 'build' | 'ask' | 'edit';
+
 interface LLMConfigType {
   provider: 'qwen' | 'openai' | 'custom';
   apiKey: string;
@@ -112,9 +114,9 @@ function App() {
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
   const [processingStep, setProcessingStep] = useState<string>('');
-  
-  // 编辑模式状态
-  const [isEditMode, setIsEditMode] = useState<boolean>(false);
+
+  // 模式状态
+  const [mode, setMode] = useState<ModeType>('build');
   const [pendingChanges, setPendingChanges] = useState<EditChange[]>([]);
 
   // 侧边栏可见性
@@ -355,27 +357,60 @@ function App() {
       timestamp: new Date()
     };
     setMessages(prev => [...prev, userMessage]);
+    const currentPrompt = prompt;
     setPrompt('');
 
     try {
       setError('');
       setSuccess('');
       setLoading(true);
-      
-      // 如果是编辑模式且有现有内容，使用编辑 API
-      if (isEditMode && result.trim()) {
+
+      // Ask 模式：直接在对话框中回答，不更新编辑器
+      if (mode === 'ask') {
+        setProcessingStep('AI 正在思考...');
+        const response = await window.electronAPI.callLLM(
+          currentPrompt,
+          fileContent || '',
+          llmConfig
+        );
+
+        if (response.success && response.result) {
+          setMessages(prev => [...prev, {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: response.result,
+            timestamp: new Date()
+          }]);
+        } else {
+          setError(response.error || '处理失败');
+          setMessages(prev => [...prev, {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: `处理失败: ${response.error || '未知错误'}`,
+            timestamp: new Date()
+          }]);
+        }
+      }
+      // Edit 模式：编辑现有内容
+      else if (mode === 'edit') {
+        if (!result.trim()) {
+          setError('编辑模式需要先有内容，请先使用 Build 模式生成内容');
+          setLoading(false);
+          return;
+        }
+
         setProcessingStep('AI 正在分析并生成修改建议...');
         const response = await window.electronAPI.editContent(
-          userMessage.content,
+          currentPrompt,
           result,
           llmConfig
         );
-        
+
         if (response.success && response.result) {
           const editResult = response.result as EditContentResult;
           if (editResult.changes.length > 0) {
             setPendingChanges(editResult.changes);
-            
+
             // 添加助手消息
             setMessages(prev => [...prev, {
               id: (Date.now() + 1).toString(),
@@ -400,19 +435,20 @@ function App() {
             timestamp: new Date()
           }]);
         }
-      } else {
-        // 正常的生成模式
+      }
+      // Build 模式：根据提示词和文件生成文本到编辑器
+      else if (mode === 'build') {
         setProcessingStep(fileContent ? '正在分析作业格式要求...' : '正在生成内容...');
         const response = await window.electronAPI.processHomeworkSteps(
-          userMessage.content,
+          currentPrompt,
           fileContent || '',
           llmConfig
         );
-        
+
         if (response.success && response.result) {
           const processResult = response.result as HomeworkProcessResult;
           setResult(processResult.finalResult.content);
-          
+
           // 添加助手消息
           setMessages(prev => [...prev, {
             id: (Date.now() + 1).toString(),
@@ -420,7 +456,7 @@ function App() {
             content: '处理完成！已生成 Markdown 文档，你可以在左侧编辑器中查看和修改。',
             timestamp: new Date()
           }]);
-          
+
           // 保存调试数据
           const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
           await window.electronAPI.saveDebugData(
@@ -435,7 +471,7 @@ function App() {
             processResult.finalResult,
             `final_result_${timestamp}.json`
           );
-          
+
           setSuccess('处理完成');
           setTimeout(() => setSuccess(''), 3000);
         } else {
@@ -715,8 +751,8 @@ function App() {
               processingStep={processingStep}
               error={error}
               success={success}
-              isEditMode={isEditMode}
-              onToggleEditMode={() => setIsEditMode(!isEditMode)}
+              mode={mode}
+              onModeChange={setMode}
               hasContent={!!result.trim()}
             />
           </div>
@@ -729,9 +765,11 @@ function App() {
           <span className="status-item">
             {filePath ? `📄 ${filePath.split('/').pop()}` : '未选择文件'}
           </span>
-          {isEditMode && (
-            <span className="status-item edit-mode-indicator">✏️ 编辑模式</span>
-          )}
+          <span className={`status-item mode-indicator mode-${mode}`}>
+            {mode === 'build' && '🔨 Build'}
+            {mode === 'ask' && '🤖 Ask'}
+            {mode === 'edit' && '✏️ Edit'}
+          </span>
         </div>
         <div className="status-right">
           <span className="status-item">{llmConfig.provider}</span>

@@ -146,10 +146,21 @@
   opacity: 0.9;
 }
 
-/* 编辑模式指示器 */
-.edit-mode-indicator {
-  color: var(--accent-primary) !important;
+/* 模式指示器 */
+.mode-indicator {
   font-weight: 500;
+}
+
+.mode-indicator.mode-build {
+  color: var(--success-text) !important;
+}
+
+.mode-indicator.mode-ask {
+  color: var(--accent-primary) !important;
+}
+
+.mode-indicator.mode-edit {
+  color: #764ba2 !important;
 }
 
 /* Diff 预览模态框 */

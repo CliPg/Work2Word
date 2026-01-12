@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, File, Loader2, MessageSquare, ChevronDown, X, Type, Edit3, Paperclip, Bot } from 'lucide-react';
+import { Send, File, Loader2, MessageSquare, ChevronDown, X, Type, Edit3, Paperclip, Bot, Hammer } from 'lucide-react';
 import './Sidebar.css';
+
+type ModeType = 'build' | 'ask' | 'edit';
 
 interface LLMConfigType {
   provider: 'qwen' | 'openai' | 'custom';
@@ -22,29 +24,29 @@ interface SidebarProps {
   onFileSelect: () => void;
   onFileRemove: () => void;
   fileLoading: boolean;
-  
+
   // 对话
   prompt: string;
   onPromptChange: (value: string) => void;
   onSendMessage: () => void;
   messages: Message[];
-  
+
   // LLM 配置
   llmConfig: LLMConfigType;
   onConfigChange: (config: LLMConfigType) => void;
-  
+
   // 排版设置
   onOpenFormatSettings: () => void;
-  
+
   // 状态
   loading: boolean;
   processingStep: string;
   error: string;
   success: string;
-  
-  // 编辑模式
-  isEditMode: boolean;
-  onToggleEditMode: () => void;
+
+  // 模式
+  mode: ModeType;
+  onModeChange: (mode: ModeType) => void;
   hasContent: boolean;
 }
 
@@ -64,16 +66,35 @@ const Sidebar: React.FC<SidebarProps> = ({
   processingStep,
   error,
   success,
-  isEditMode,
-  onToggleEditMode,
+  mode,
+  onModeChange,
   hasContent,
 }) => {
   const [modelSelectorOpen, setModelSelectorOpen] = useState(false);
+  const [modeSelectorOpen, setModeSelectorOpen] = useState(false);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const modelSelectorRef = useRef<HTMLDivElement>(null);
+  const modeSelectorRef = useRef<HTMLDivElement>(null);
 
   const fileName = filePath ? filePath.split('/').pop() || filePath.split('\\').pop() : '';
+
+  // 点击外部关闭下拉菜单
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (modelSelectorRef.current && !modelSelectorRef.current.contains(event.target as Node)) {
+        setModelSelectorOpen(false);
+      }
+      if (modeSelectorRef.current && !modeSelectorRef.current.contains(event.target as Node)) {
+        setModeSelectorOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   useEffect(() => {
     // 使用容器的 scrollTop 而不是 scrollIntoView，避免影响页面滚动
@@ -132,7 +153,11 @@ const Sidebar: React.FC<SidebarProps> = ({
           {messages.length === 0 ? (
             <div className="messages-empty">
               <MessageSquare size={32} />
-              <p>{isEditMode ? '输入编辑指令修改内容' : '输入作业要求开始处理'}</p>
+              <p>
+                {mode === 'edit' ? '输入编辑指令修改内容' :
+                 mode === 'ask' ? '输入问题开始对话' :
+                 '输入作业要求开始处理'}
+              </p>
               <span className="hint-text">可以附加文件或直接开始对话</span>
             </div>
           ) : (
@@ -168,7 +193,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* VSCode 风格的统一输入区域 */}
-      <div className={`unified-input-container ${isEditMode ? 'edit-mode' : ''}`}>
+      <div className={`unified-input-container ${mode === 'edit' ? 'edit-mode' : ''}`}>
         {/* 附件预览 */}
         {filePath && (
           <div className="attached-file">
@@ -196,7 +221,11 @@ const Sidebar: React.FC<SidebarProps> = ({
             value={prompt}
             onChange={(e) => onPromptChange(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={isEditMode ? '输入编辑指令，如：把第一段改成更正式的语气...' : '输入作业要求...'}
+            placeholder={
+              mode === 'edit' ? '输入编辑指令，如：把第一段改成更正式的语气...' :
+              mode === 'ask' ? '输入问题开始对话...' :
+              '输入作业要求...'
+            }
             disabled={loading}
             rows={2}
           />
@@ -285,16 +314,65 @@ const Sidebar: React.FC<SidebarProps> = ({
               )}
             </div>
 
-            {/* 编辑模式切换 */}
-            <button
-              className={`toolbar-btn edit-mode-btn ${isEditMode ? 'active' : ''}`}
-              onClick={onToggleEditMode}
-              title={isEditMode ? '退出编辑模式' : '进入编辑模式'}
-              disabled={!hasContent}
-            >
-              <Edit3 size={16} />
-              <span>编辑</span>
-            </button>
+            {/* 模式选择 */}
+            <div className="mode-selector-wrapper" ref={modeSelectorRef}>
+              <button
+                className="toolbar-btn mode-btn"
+                onClick={() => setModeSelectorOpen(!modeSelectorOpen)}
+              >
+                {mode === 'build' && <Hammer size={16} />}
+                {mode === 'edit' && <Edit3 size={16} />}
+                {mode === 'ask' && <Bot size={16} />}
+                <span className="mode-name">
+                  {mode === 'build' ? 'Build' : mode === 'edit' ? 'Edit' : 'Ask'}
+                </span>
+                <ChevronDown
+                  size={14}
+                  className={modeSelectorOpen ? 'rotate' : ''}
+                />
+              </button>
+
+              {modeSelectorOpen && (
+                <div className="mode-dropdown">
+                  <div className="dropdown-section">
+                    <div className="dropdown-label">选择模式</div>
+                    <div className="dropdown-options">
+                      <button
+                        className={`dropdown-option ${mode === 'build' ? 'active' : ''}`}
+                        onClick={() => {
+                          onModeChange('build');
+                          setModeSelectorOpen(false);
+                        }}
+                      >
+                        <Hammer size={14} />
+                        Build
+                      </button>
+                      <button
+                        className={`dropdown-option ${mode === 'ask' ? 'active' : ''}`}
+                        onClick={() => {
+                          onModeChange('ask');
+                          setModeSelectorOpen(false);
+                        }}
+                      >
+                        <Bot size={14} />
+                        Ask
+                      </button>
+                      <button
+                        className={`dropdown-option ${mode === 'edit' ? 'active' : ''}`}
+                        onClick={() => {
+                          onModeChange('edit');
+                          setModeSelectorOpen(false);
+                        }}
+                        disabled={!hasContent}
+                      >
+                        <Edit3 size={14} />
+                        Edit
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="toolbar-right">
@@ -302,7 +380,11 @@ const Sidebar: React.FC<SidebarProps> = ({
               className="send-btn"
               onClick={onSendMessage}
               disabled={loading || !prompt.trim()}
-              title={isEditMode ? '发送编辑指令' : '发送'}
+              title={
+                mode === 'edit' ? '发送编辑指令' :
+                mode === 'ask' ? '发送' :
+                '发送'
+              }
             >
               {loading ? (
                 <Loader2 size={16} className="spin" />
