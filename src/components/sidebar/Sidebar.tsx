@@ -193,7 +193,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* VSCode 风格的统一输入区域 */}
-      <div className={`unified-input-container ${mode === 'edit' ? 'edit-mode' : ''}`}>
+      <div className={`unified-input-container ${mode === 'build' ? 'build-mode' : ''} ${mode === 'ask' ? 'ask-mode' : ''} ${mode === 'edit' ? 'edit-mode' : ''}`}>
         {/* 附件预览 */}
         {filePath && (
           <div className="attached-file">
@@ -363,7 +363,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                           onModeChange('edit');
                           setModeSelectorOpen(false);
                         }}
-                        disabled={!hasContent}
                       >
                         <Edit3 size={14} />
                         Edit

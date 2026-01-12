@@ -150,6 +150,16 @@
   box-shadow: 0 0 0 1px rgba(118, 75, 162, 0.3);
 }
 
+.unified-input-container.build-mode {
+  border-color: var(--success-text);
+  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.3);
+}
+
+.unified-input-container.ask-mode {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 1px rgba(102, 126, 234, 0.3);
+}
+
 /* 附件预览 */
 .attached-file {
   display: flex;
