@@ -1019,7 +1019,7 @@ function collectImagePaths(token: any, imageMap: Map<string, Buffer>) {
 }
 
 // 将 Markdown 转换为段落数组（使用 marked 解析器）
-async function markdownToParagraphs(mdContent: string, formatSettings?: FormatSettings): Promise<(Paragraph | Table)[]> {
+async function markdownToParagraphs(mdContent: string, formatSettings?: FormatSettings, sourceFilePath?: string): Promise<(Paragraph | Table)[]> {
   const elements: (Paragraph | Table)[] = [];
 
   // 预处理：收集所有图片路径并加载数据
@@ -1075,9 +1075,24 @@ async function markdownToParagraphs(mdContent: string, formatSettings?: FormatSe
           console.error('下载网络图片失败:', imagePath, fetchError);
         }
       }
-      // 处理本地绝对路径
+      // 处理本地绝对路径或相对于源文件的相对路径
       else {
-        imageBuffer = await fs.readFile(imagePath);
+        if (path.isAbsolute(imagePath)) {
+          console.log('加载绝对路径图片:', imagePath);
+          imageBuffer = await fs.readFile(imagePath);
+        } else if (sourceFilePath) {
+          // 相对路径：基于源文件目录解析
+          const sourceDir = path.dirname(sourceFilePath);
+          const fullImagePath = path.resolve(sourceDir, imagePath);
+          console.log('加载相对路径图片:', imagePath, '→', fullImagePath, '(sourceFilePath:', sourceFilePath, ')');
+          try {
+            imageBuffer = await fs.readFile(fullImagePath);
+          } catch (resolveError) {
+            console.error('无法加载相对路径图片:', imagePath, '→', fullImagePath, resolveError);
+          }
+        } else {
+          console.warn('无法解析图片路径（无 sourceFilePath）:', imagePath);
+        }
       }
 
       if (imageBuffer) {
@@ -1283,22 +1298,36 @@ export async function convertToFormat(
   mdContent: string,
   format: 'doc' | 'pdf' | 'md',
   outputPath?: string,
-  formatSettings?: FormatSettings
+  formatSettings?: FormatSettings,
+  sourceFilePath?: string
 ): Promise<{ path: string; buffer?: Buffer; html?: string }> {
   if (format === 'md') {
     const filePath = outputPath || `output_${Date.now()}.md`;
 
     // 将相对路径转换为绝对路径
-    // 匹配 markdown 图片语法 ![alt](./assets/images/xxx.png)
-    const processedContent = mdContent.replace(
+    let processedContent = mdContent;
+
+    // 处理 ./assets/images/ 路径
+    const documentsPath = app.getPath('documents');
+    processedContent = processedContent.replace(
       /!\[([^\]]*)\]\(\.\/assets\/images\/([^)]+)\)/g,
-      (match, alt, filename) => {
-        // 获取用户文档目录
-        const documentsPath = app.getPath('documents');
+      (_, alt, filename) => {
         const absolutePath = path.join(documentsPath, 'Work2Word_Assets', 'images', filename);
         return `![${alt}](${absolutePath})`;
       }
     );
+
+    // 处理其他相对路径（如 ./img/xxx.png），基于源文件目录解析
+    if (sourceFilePath) {
+      const sourceDir = path.dirname(sourceFilePath);
+      processedContent = processedContent.replace(
+        /!\[([^\]]*)\]\((\.\/[^)]+)\)/g,
+        (_, alt, relPath) => {
+          const absolutePath = path.resolve(sourceDir, relPath);
+          return `![${alt}](${absolutePath})`;
+        }
+      );
+    }
 
     await fs.writeFile(filePath, processedContent, 'utf-8');
     return { path: filePath };
@@ -1308,7 +1337,7 @@ export async function convertToFormat(
   
   if (format === 'doc') {
     try {
-      const elements = await markdownToParagraphs(mdContent, formatSettings);
+      const elements = await markdownToParagraphs(mdContent, formatSettings, sourceFilePath);
       const doc = new Document({
         sections: [
           {

@@ -41,6 +41,7 @@ interface WordPreviewProps {
   loading?: boolean;
   onSave: (format: 'doc' | 'pdf' | 'md') => void;
   formatSettings?: FormatSettings;
+  sourceFilePath?: string;
   onScroll?: (scrollPercent: number) => void;
 }
 
@@ -61,9 +62,8 @@ const getFontStack = (fontName: string): string => {
 };
 
 // 自定义图片组件
-const CustomImage = ({ src, alt, ...props }: React.ImgHTMLAttributes<HTMLImageElement>) => {
+const CustomImage = ({ src, alt, sourceDir, ...rest }: React.ImgHTMLAttributes<HTMLImageElement> & { sourceDir?: string }) => {
   const [error, setError] = React.useState(false);
-  const [loading, setLoading] = React.useState(true);
 
   // 处理相对路径的图片
   const getImageSrc = (src: string): string => {
@@ -72,12 +72,9 @@ const CustomImage = ({ src, alt, ...props }: React.ImgHTMLAttributes<HTMLImageEl
     // 如果是 ./assets/images/ 开头的相对路径，转换为完整的文件路径
     if (src.startsWith('./assets/images/') || src.startsWith('assets/images/')) {
       const fileName = src.split('/').pop() || '';
-      // 在 Electron 环境中，使用用户文档目录
       if (window.electronAPI) {
-        // 使用特殊的协议来标记需要通过 Electron 处理的图片
         return `work2word-local://${fileName}`;
       }
-      // 开发环境中的回退处理
       return src;
     }
 
@@ -86,44 +83,42 @@ const CustomImage = ({ src, alt, ...props }: React.ImgHTMLAttributes<HTMLImageEl
       return src;
     }
 
-    // 其他情况，返回原始路径
+    // 其他路径（如 ./img/result.png），通过协议加载
+    if (window.electronAPI) {
+      if (sourceDir) {
+        // 有源文件目录，解析为绝对路径
+        const cleanPath = src.replace(/^\.\//, '');
+        const absolutePath = sourceDir + '/' + cleanPath;
+        return `work2word-local://img?abs=${encodeURIComponent(absolutePath)}`;
+      } else {
+        // 没有源文件信息，将原始相对路径传给主进程尝试解析
+        return `work2word-local://img?rel=${encodeURIComponent(src)}`;
+      }
+    }
+
     return src;
   };
 
   const imageSrc = getImageSrc(src || '');
 
-  const handleError = () => {
-    setError(true);
-    setLoading(false);
-  };
-
-  const handleLoad = () => {
-    setLoading(false);
-  };
-
-  // 如果图片加载失败，显示占位符
+  // 如果图片加载失败，显示占位符（用 span 避免嵌套在 p 内的 DOM 警告）
   if (error) {
     return (
-      <div className="image-error" title={`图片加载失败: ${alt || src}`}>
-        <ImageOff size={24} />
+      <span className="image-error" title={`图片加载失败: ${alt || src}`}>
+        <ImageOff size={16} />
         <span>{alt || '图片'}</span>
-        <small>{src}</small>
-      </div>
+      </span>
     );
   }
 
   return (
-    <div className="markdown-image-wrapper">
-      {loading && <div className="image-loading">加载中...</div>}
-      <img
-        src={imageSrc}
-        alt={alt}
-        loading="lazy"
-        onError={handleError}
-        onLoad={handleLoad}
-        {...props}
-      />
-    </div>
+    <img
+      src={imageSrc}
+      alt={alt}
+      loading="lazy"
+      onError={() => setError(true)}
+      {...rest}
+    />
   );
 };
 
@@ -132,6 +127,7 @@ const WordPreview = forwardRef<WordPreviewHandle, WordPreviewProps>(({
   loading = false,
   onSave,
   formatSettings,
+  sourceFilePath,
   onScroll,
 }, ref) => {
   const previewBodyRef = useRef<HTMLDivElement>(null);
@@ -249,7 +245,7 @@ const WordPreview = forwardRef<WordPreviewHandle, WordPreviewProps>(({
                 remarkPlugins={[remarkGfm, remarkMath]}
                 rehypePlugins={[rehypeKatex]}
                 components={{
-                  img: CustomImage,
+                  img: (props) => <CustomImage {...props} sourceDir={sourceFilePath ? sourceFilePath.substring(0, sourceFilePath.lastIndexOf('/')) : undefined} />,
                 }}
               >
                 {content}

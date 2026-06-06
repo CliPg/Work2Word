@@ -7,6 +7,7 @@ import { processFile, convertToFormat } from './fileProcessor';
 import { callLLM, processHomework, ProcessStepResult, HomeworkProcessResult, editContent } from './services/llmService';
 
 let mainWindow: BrowserWindow | null = null;
+let lastSourceDir = '';  // 记住最后打开文件所在的目录，用于解析相对路径图片
 
 // 检测当前平台
 const isMac = process.platform === 'darwin';
@@ -175,13 +176,48 @@ app.whenReady().then(() => {
   // 注册自定义协议来处理本地图片
   protocol.handle('work2word-local', async (request) => {
     try {
-      // 从 URL 中提取文件名
-      const url = request.url;
-      const fileName = url.replace('work2word-local://', '');
+      const parsedUrl = new URL(request.url);
+      let imagePath: string;
 
-      // 构建图片的完整路径
-      const documentsPath = app.getPath('documents');
-      const imagePath = path.join(documentsPath, 'Work2Word_Assets', 'images', fileName);
+      // 检查 abs 参数（绝对路径模式）
+      const absPath = parsedUrl.searchParams.get('abs');
+      if (absPath) {
+        imagePath = absPath;
+      } else {
+        // 检查 rel 参数（相对路径，基于源文件目录解析）
+        const relPath = parsedUrl.searchParams.get('rel');
+        if (relPath) {
+          const cleanPath = relPath.replace(/^\.\//, '');
+          // 优先使用源文件目录
+          const candidates: string[] = [];
+          if (lastSourceDir) {
+            candidates.push(path.join(lastSourceDir, cleanPath));
+          }
+          candidates.push(
+            path.join(app.getPath('documents'), cleanPath),
+            path.join(process.cwd(), cleanPath),
+          );
+          imagePath = '';
+          for (const candidate of candidates) {
+            try {
+              await fs.access(candidate, fsConstants.R_OK);
+              imagePath = candidate;
+              break;
+            } catch { /* try next */ }
+          }
+          if (!imagePath) {
+            console.warn('协议: 找不到相对路径图片:', relPath, '已尝试:', candidates);
+            return new Response('Not Found', { status: 404 });
+          }
+        } else {
+          // 原有逻辑：assets 目录下的文件名
+          const fileName = parsedUrl.hostname + parsedUrl.pathname;
+          const documentsPath = app.getPath('documents');
+          imagePath = path.join(documentsPath, 'Work2Word_Assets', 'images', fileName);
+        }
+      }
+
+      console.log('协议加载图片:', imagePath);
 
       // 检查文件是否存在
       try {
@@ -195,7 +231,7 @@ app.whenReady().then(() => {
       const imageBuffer = await fs.readFile(imagePath);
 
       // 根据文件扩展名确定 MIME 类型
-      const ext = path.extname(fileName).toLowerCase();
+      const ext = path.extname(imagePath).toLowerCase();
       const mimeTypes: Record<string, string> = {
         '.png': 'image/png',
         '.jpg': 'image/jpeg',
@@ -240,6 +276,10 @@ app.on('window-all-closed', () => {
 // IPC handlers
 ipcMain.handle('process-file', async (_, filePath: string) => {
   try {
+    // 记住源文件目录，供图片协议解析相对路径使用
+    lastSourceDir = path.dirname(filePath);
+    console.log('源文件目录已记录:', lastSourceDir);
+
     const content = await processFile(filePath);
     return { success: true, content };
   } catch (error: any) {
@@ -295,9 +335,11 @@ ipcMain.handle('save-debug-data', async (_, data: ProcessStepResult, filename: s
   }
 });
 
-ipcMain.handle('convert-file', async (_, mdContent: string, format: 'doc' | 'pdf' | 'md', outputPath?: string, formatSettings?: any) => {
+ipcMain.handle('convert-file', async (_, mdContent: string, format: 'doc' | 'pdf' | 'md', outputPath?: string, formatSettings?: any, sourceFilePath?: string) => {
   try {
-    const result = await convertToFormat(mdContent, format, outputPath, formatSettings);
+    // 如果前端没传 sourceFilePath，用主进程记录的源文件目录回退
+    const effectiveSourcePath = sourceFilePath || (lastSourceDir ? lastSourceDir + '/dummy.ext' : undefined);
+    const result = await convertToFormat(mdContent, format, outputPath, formatSettings, effectiveSourcePath);
     
     // 如果是 PDF 格式，使用 Electron 的 printToPDF
     if (format === 'pdf' && result.html) {

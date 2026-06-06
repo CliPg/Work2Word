@@ -309,9 +309,9 @@ function App() {
       
       setError('');
       setFileLoading(true);
+      setFilePath(dialogResult.filePath);
       const response = await window.electronAPI.processFile(dialogResult.filePath);
       if (response.success && response.content) {
-        setFilePath(dialogResult.filePath);
         setFileContent(response.content);
         
         // 添加系统消息
@@ -580,7 +580,8 @@ function App() {
         result,
         format,
         dialogResult.filePath,
-        formatSettings
+        formatSettings,
+        filePath
       );
 
       if (response.success) {
@@ -717,6 +718,7 @@ function App() {
             loading={loading}
             onSave={handleSave}
             formatSettings={formatSettings}
+            sourceFilePath={filePath}
             onScroll={(scrollPercent) => editorRef.current?.scrollTo(scrollPercent)}
           />
         </div>

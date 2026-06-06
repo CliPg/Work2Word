@@ -13,8 +13,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // 新增：保存调试数据
   saveDebugData: (data: any, filename: string) =>
     ipcRenderer.invoke('save-debug-data', data, filename),
-  convertFile: (mdContent: string, format: 'doc' | 'pdf' | 'md', outputPath?: string, formatSettings?: any) =>
-    ipcRenderer.invoke('convert-file', mdContent, format, outputPath, formatSettings),
+  convertFile: (mdContent: string, format: 'doc' | 'pdf' | 'md', outputPath?: string, formatSettings?: any, sourceFilePath?: string) =>
+    ipcRenderer.invoke('convert-file', mdContent, format, outputPath, formatSettings, sourceFilePath),
   saveFileDialog: (defaultFilename: string) =>
     ipcRenderer.invoke('save-file-dialog', defaultFilename),
   openFileDialog: () => ipcRenderer.invoke('open-file-dialog'),
@@ -37,7 +37,7 @@ declare global {
       processHomeworkSteps: (prompt: string, fileContent: string, llmConfig: any) => Promise<any>;
       editContent: (instruction: string, currentContent: string, llmConfig: any) => Promise<any>;
       saveDebugData: (data: any, filename: string) => Promise<any>;
-      convertFile: (mdContent: string, format: 'doc' | 'pdf' | 'md', outputPath?: string, formatSettings?: any) => Promise<any>;
+      convertFile: (mdContent: string, format: 'doc' | 'pdf' | 'md', outputPath?: string, formatSettings?: any, sourceFilePath?: string) => Promise<any>;
       saveFileDialog: (defaultFilename: string) => Promise<any>;
       openFileDialog: () => Promise<any>;
       openMarkdownFileDialog: () => Promise<{ canceled: boolean; filePath?: string }>;
