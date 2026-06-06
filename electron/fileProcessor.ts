@@ -411,15 +411,81 @@ const latexToUnicode: Record<string, string> = {
   '\\prime': '′', '\\degree': '°', '\\%': '%',
 };
 
+// 格式化矩阵内容为文本表示
+function formatMatrixContent(content: string, leftBracket: string, rightBracket: string): string {
+  const rows = content.trim().split(/\\\\/).filter(r => r.trim());
+  if (rows.length === 0) return `${leftBracket}${rightBracket}`;
+
+  const formattedRows = rows.map(row => {
+    const cols = row.split('&').map(c => c.trim());
+    return cols.join('  ');
+  });
+
+  if (formattedRows.length === 1) {
+    return `${leftBracket} ${formattedRows[0]} ${rightBracket}`;
+  }
+  // 多行矩阵用分号分隔行
+  return `${leftBracket} ${formattedRows.join(';  ')} ${rightBracket}`;
+}
+
 // 将简单的 LaTeX 转换为 Unicode
 function latexToUnicodeText(latex: string): string {
   let result = latex;
-  
-  // 替换已知的 LaTeX 命令
+
+  // ===== 第一步：处理 LaTeX 环境（必须在花括号清理之前） =====
+
+  // 处理矩阵环境
+  result = result.replace(/\\begin\{bmatrix\}([\s\S]*?)\\end\{bmatrix\}/g, (_, content) => {
+    return formatMatrixContent(content, '[', ']');
+  });
+  result = result.replace(/\\begin\{pmatrix\}([\s\S]*?)\\end\{pmatrix\}/g, (_, content) => {
+    return formatMatrixContent(content, '(', ')');
+  });
+  result = result.replace(/\\begin\{vmatrix\}([\s\S]*?)\\end\{vmatrix\}/g, (_, content) => {
+    return formatMatrixContent(content, '|', '|');
+  });
+  result = result.replace(/\\begin\{Vmatrix\}([\s\S]*?)\\end\{Vmatrix\}/g, (_, content) => {
+    return formatMatrixContent(content, '‖', '‖');
+  });
+  result = result.replace(/\\begin\{matrix\}([\s\S]*?)\\end\{matrix\}/g, (_, content) => {
+    return formatMatrixContent(content, '', '');
+  });
+
+  // 处理 cases 环境
+  result = result.replace(/\\begin\{cases\}([\s\S]*?)\\end\{cases\}/g, (_, content) => {
+    const rows = content.trim().split(/\\\\/).filter((r: string) => r.trim());
+    return '{ ' + rows.map((r: string) => r.trim().replace(/&/g, ', ')).join('; ') + ' }';
+  });
+
+  // 处理 aligned 环境
+  result = result.replace(/\\begin\{aligned\}([\s\S]*?)\\end\{aligned\}/g, (_, content) => {
+    const rows = content.trim().split(/\\\\/).filter((r: string) => r.trim());
+    return rows.map((r: string) => r.trim().replace(/&/g, ' ')).join('; ');
+  });
+
+  // 处理 \left 和 \right 括号
+  result = result.replace(/\\left\(/g, '(');
+  result = result.replace(/\\right\)/g, ')');
+  result = result.replace(/\\left\[/g, '[');
+  result = result.replace(/\\right\]/g, ']');
+  result = result.replace(/\\left\\\{/g, '{');
+  result = result.replace(/\\right\\\}/g, '}');
+  result = result.replace(/\\left\|/g, '|');
+  result = result.replace(/\\right\|/g, '|');
+
+  // ===== 第二步：替换已知的 LaTeX 命令 =====
   for (const [cmd, unicode] of Object.entries(latexToUnicode)) {
     result = result.replace(new RegExp(cmd.replace(/\\/g, '\\\\'), 'g'), unicode);
   }
-  
+
+  // 处理间距命令
+  result = result.replace(/\\qquad/g, '    ');
+  result = result.replace(/\\quad/g, '  ');
+  result = result.replace(/\\;/g, ' ');
+  result = result.replace(/\\:/g, ' ');
+  result = result.replace(/\\,/g, ' ');
+  result = result.replace(/\\!/g, '');
+
   // 处理上标 ^{...} 或 ^x
   result = result.replace(/\^{([^}]+)}/g, (_, content) => {
     return content.split('').map((c: string) => {
@@ -439,8 +505,8 @@ function latexToUnicodeText(latex: string): string {
     };
     return superscripts[d] || d;
   });
-  
-  // 处理下标 _{...} 或 _x
+
+  // 处理下标 _{...}
   result = result.replace(/_{([^}]+)}/g, (_, content) => {
     return content.split('').map((c: string) => {
       const subscripts: Record<string, string> = {
@@ -453,32 +519,39 @@ function latexToUnicodeText(latex: string): string {
       return subscripts[c] || c;
     }).join('');
   });
-  result = result.replace(/_(\d)/g, (_, d) => {
+  // 处理单字符下标（数字和字母）
+  result = result.replace(/_([a-zA-Z\d])/g, (_, c) => {
     const subscripts: Record<string, string> = {
       '0': '₀', '1': '₁', '2': '₂', '3': '₃', '4': '₄',
       '5': '₅', '6': '₆', '7': '₇', '8': '₈', '9': '₉',
+      '+': '₊', '-': '₋', '=': '₌', '(': '₍', ')': '₎',
+      'a': 'ₐ', 'e': 'ₑ', 'o': 'ₒ', 'x': 'ₓ',
+      'i': 'ᵢ', 'j': 'ⱼ', 'n': 'ₙ', 'm': 'ₘ',
     };
-    return subscripts[d] || d;
+    return subscripts[c] || c;
   });
-  
+
   // 处理分数 \frac{a}{b} -> a/b
   result = result.replace(/\\frac{([^}]+)}{([^}]+)}/g, '($1/$2)');
-  
+
   // 处理平方根 \sqrt{x} -> √x
   result = result.replace(/\\sqrt{([^}]+)}/g, '√($1)');
-  
-  // 处理阶乘 n! 保持不变
+
   // 移除剩余的 LaTeX 命令格式如 \text{...}
   result = result.replace(/\\text{([^}]+)}/g, '$1');
   result = result.replace(/\\mathrm{([^}]+)}/g, '$1');
   result = result.replace(/\\mathbf{([^}]+)}/g, '$1');
-  
+
+  // 清理未处理的 \begin{...} 和 \end{...}
+  result = result.replace(/\\begin\{[^}]+\}/g, '');
+  result = result.replace(/\\end\{[^}]+\}/g, '');
+
   // 清理多余的花括号
   result = result.replace(/{([^{}]+)}/g, '$1');
-  
+
   // 清理空格
   result = result.replace(/\s+/g, ' ').trim();
-  
+
   return result;
 }
 
