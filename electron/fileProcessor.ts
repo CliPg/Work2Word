@@ -4,8 +4,11 @@ import { app } from 'electron';
 import mammoth from 'mammoth';
 import pdfParse from 'pdf-parse';
 import WordExtractor from 'word-extractor';
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle, ImageRun, Media } from 'docx';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle, ImageRun, Media, Math as DocxMath } from 'docx';
 import { marked } from 'marked';
+// @ts-ignore - latex-to-omml 没有类型声明
+import { latexToOMML } from 'latex-to-omml';
+import { DOMParser } from '@xmldom/xmldom';
 
 const wordExtractor = new WordExtractor();
 
@@ -204,19 +207,19 @@ function getHeadingFontSize(depth: number): number {
 }
 
 // 解析内联格式（粗体、斜体、删除线、代码等）
-function parseInlineTokens(tokens: any[], baseConfig: Partial<TextRunConfig> = {}, formatSettings?: FormatSettings): TextRun[] {
-  const runs: TextRun[] = [];
+async function parseInlineTokens(tokens: any[], baseConfig: Partial<TextRunConfig> = {}, formatSettings?: FormatSettings): Promise<ParagraphChild[]> {
+  const runs: ParagraphChild[] = [];
   const paraStyle = formatSettings?.paragraph || defaultStyles;
-  
+
   for (const token of tokens) {
     const tokenType = token.type as string;
-    
+
     switch (tokenType) {
       case 'text': {
         // 使用 parseTextWithFormat 处理文本，以支持 LaTeX 公式
         const textContent = token.text || '';
         if (textContent) {
-          const textRuns = parseTextWithFormat(textContent, formatSettings, baseConfig);
+          const textRuns = await parseTextWithFormat(textContent, formatSettings, baseConfig);
           runs.push(...textRuns);
         }
         break;
@@ -317,7 +320,7 @@ function parseInlineTokens(tokens: any[], baseConfig: Partial<TextRunConfig> = {
         // 对于其他类型，尝试提取文本并使用 parseTextWithFormat 处理
         const textContent = token.text || token.raw || '';
         if (textContent) {
-          const textRuns = parseTextWithFormat(textContent, formatSettings, baseConfig);
+          const textRuns = await parseTextWithFormat(textContent, formatSettings, baseConfig);
           runs.push(...textRuns);
         }
       }
@@ -555,11 +558,78 @@ function latexToUnicodeText(latex: string): string {
   return result;
 }
 
-// 简单的文本解析：处理 **加粗**、`代码` 和 $公式$ 格式
-function parseTextWithFormat(text: string, formatSettings?: FormatSettings, baseConfig: Partial<TextRunConfig> = {}): TextRun[] {
-  const runs: TextRun[] = [];
+// ===== OMML 原生 Word 公式支持 =====
+
+// 将 DOM 节点递归转换为 docx 的 IXmlableObject 格式
+function domNodeToXmlObject(node: Element): Record<string, any> {
+  const children: any[] = [];
+
+  // 收集属性
+  const attrs: Record<string, string> = {};
+  if (node.attributes && node.attributes.length > 0) {
+    for (let i = 0; i < node.attributes.length; i++) {
+      const attr = node.attributes[i];
+      attrs[attr.name] = attr.value;
+    }
+  }
+  if (Object.keys(attrs).length > 0) {
+    children.push({ _attr: attrs });
+  }
+
+  // 处理子节点
+  for (let i = 0; i < node.childNodes.length; i++) {
+    const child = node.childNodes[i];
+    if (child.nodeType === 1) {
+      // 元素节点
+      children.push(domNodeToXmlObject(child as Element));
+    } else if (child.nodeType === 3) {
+      // 文本节点
+      const text = child.nodeValue?.trim();
+      if (text) {
+        children.push(text);
+      }
+    }
+  }
+
+  return { [node.tagName]: children.length > 0 ? children : {} };
+}
+
+// 自定义 Math 类：继承 docx 的 Math，覆盖 prepForXml 输出原生 OMML
+class OmmlMath extends DocxMath {
+  private ommlData: Record<string, any>;
+
+  constructor(ommlXml: string) {
+    super({ children: [] });
+    const doc = new DOMParser().parseFromString(ommlXml, 'text/xml');
+    const mathElement = doc.documentElement;
+    this.ommlData = domNodeToXmlObject(mathElement);
+  }
+
+  prepForXml(context: any): Record<string, any> | undefined {
+    return this.ommlData;
+  }
+}
+
+// 将 LaTeX 转换为 docx 原生 Math 对象（异步，带 fallback）
+async function latexToNativeMath(latex: string, isBlock: boolean = false): Promise<DocxMath | null> {
+  try {
+    const ommlXml = await latexToOMML(latex, { displayMode: isBlock });
+    if (ommlXml && ommlXml.includes('m:oMath')) {
+      return new OmmlMath(ommlXml);
+    }
+    return null;
+  } catch (e) {
+    console.warn('LaTeX 转 OMML 失败，将使用 Unicode 降级:', (e as Error).message);
+    return null;
+  }
+}
+
+// 简单的文本解析：处理 **加粗**、`代码` 和 $公式$ 格式（异步，支持原生 Math）
+type ParagraphChild = TextRun | DocxMath;
+async function parseTextWithFormat(text: string, formatSettings?: FormatSettings, baseConfig: Partial<TextRunConfig> = {}): Promise<ParagraphChild[]> {
+  const runs: ParagraphChild[] = [];
   const paraStyle = formatSettings?.paragraph || defaultStyles;
-  
+
   // 分步处理：先处理公式，再处理其他格式
   // 使用更健壮的正则表达式来匹配 LaTeX 公式
   // $$...$$：块级公式（非贪婪匹配）
@@ -567,7 +637,7 @@ function parseTextWithFormat(text: string, formatSettings?: FormatSettings, base
   const regex = /(\$\$(.+?)\$\$)|(\$(?!\$)(.+?)(?<!\$)\$)|(`+)([^`]+)\5|\*\*(.+?)\*\*/gs;
   let lastIndex = 0;
   let match;
-  
+
   while ((match = regex.exec(text)) !== null) {
     // 添加匹配前的普通文本
     if (match.index > lastIndex) {
@@ -583,25 +653,35 @@ function parseTextWithFormat(text: string, formatSettings?: FormatSettings, base
         }));
       }
     }
-    
+
     if (match[2] !== undefined) {
-      // 匹配到块级公式 $$...$$ 
-      const unicodeFormula = latexToUnicodeText(match[2]);
-      runs.push(new TextRun({
-        text: unicodeFormula,
-        font: { name: 'Cambria Math' },
-        size: baseConfig.size || (paraStyle.fontSize || defaultStyles.fontSize) * 2,
-        italics: true,
-      }));
+      // 匹配到块级公式 $$...$$ - 尝试原生 OMML
+      const mathObj = await latexToNativeMath(match[2], true);
+      if (mathObj) {
+        runs.push(mathObj);
+      } else {
+        const unicodeFormula = latexToUnicodeText(match[2]);
+        runs.push(new TextRun({
+          text: unicodeFormula,
+          font: { name: 'Cambria Math' },
+          size: baseConfig.size || (paraStyle.fontSize || defaultStyles.fontSize) * 2,
+          italics: true,
+        }));
+      }
     } else if (match[4] !== undefined) {
-      // 匹配到行内公式 $...$
-      const unicodeFormula = latexToUnicodeText(match[4]);
-      runs.push(new TextRun({
-        text: unicodeFormula,
-        font: { name: 'Cambria Math' },
-        size: baseConfig.size || (paraStyle.fontSize || defaultStyles.fontSize) * 2,
-        italics: true,
-      }));
+      // 匹配到行内公式 $...$ - 尝试原生 OMML
+      const mathObj = await latexToNativeMath(match[4], false);
+      if (mathObj) {
+        runs.push(mathObj);
+      } else {
+        const unicodeFormula = latexToUnicodeText(match[4]);
+        runs.push(new TextRun({
+          text: unicodeFormula,
+          font: { name: 'Cambria Math' },
+          size: baseConfig.size || (paraStyle.fontSize || defaultStyles.fontSize) * 2,
+          italics: true,
+        }));
+      }
     } else if (match[6] !== undefined) {
       // 匹配到行内代码 `code`
       runs.push(new TextRun({
@@ -621,10 +701,10 @@ function parseTextWithFormat(text: string, formatSettings?: FormatSettings, base
         color: baseConfig.color,
       }));
     }
-    
+
     lastIndex = regex.lastIndex;
   }
-  
+
   // 添加剩余的普通文本
   if (lastIndex < text.length) {
     const remainingText = text.slice(lastIndex);
@@ -639,7 +719,7 @@ function parseTextWithFormat(text: string, formatSettings?: FormatSettings, base
       }));
     }
   }
-  
+
   // 如果没有任何匹配，返回原始文本
   if (runs.length === 0) {
     runs.push(new TextRun({
@@ -656,16 +736,16 @@ function parseTextWithFormat(text: string, formatSettings?: FormatSettings, base
 }
 
 // 创建普通段落
-function createParagraphElement(token: any, formatSettings?: FormatSettings): Paragraph {
+async function createParagraphElement(token: any, formatSettings?: FormatSettings): Promise<Paragraph> {
   const paraStyle = formatSettings?.paragraph || defaultStyles;
   // 获取段落的原始文本（包含markdown标记）
   const rawText = token.raw || token.text || '';
   // 使用简单的正则处理格式
-  const runs = parseTextWithFormat(rawText, formatSettings);
-  
+  const runs = await parseTextWithFormat(rawText, formatSettings);
+
   // 计算首行缩进（字符数 * 字号 * 20 twip）
   const firstLineIndent = (paraStyle.firstLineIndent || 0) * (paraStyle.fontSize || defaultStyles.fontSize) * 20;
-  
+
   return new Paragraph({
     children: runs,
     spacing: {
@@ -679,18 +759,18 @@ function createParagraphElement(token: any, formatSettings?: FormatSettings): Pa
 }
 
 // 创建引用块
-function createBlockquoteParagraphs(token: any, formatSettings?: FormatSettings): Paragraph[] {
+async function createBlockquoteParagraphs(token: any, formatSettings?: FormatSettings): Promise<Paragraph[]> {
   const paragraphs: Paragraph[] = [];
   const paraStyle = formatSettings?.paragraph || defaultStyles;
-  
+
   if (token.tokens && Array.isArray(token.tokens)) {
     for (const innerToken of token.tokens) {
       if (innerToken.type === 'paragraph') {
         const runs = innerToken.tokens
-          ? parseInlineTokens(innerToken.tokens, { color: '666666', italics: true }, formatSettings)
-          : [new TextRun({ 
-              text: innerToken.text || '', 
-              color: '666666', 
+          ? await parseInlineTokens(innerToken.tokens, { color: '666666', italics: true }, formatSettings)
+          : [new TextRun({
+              text: innerToken.text || '',
+              color: '666666',
               italics: true,
               font: { name: paraStyle.fontFamily || defaultStyles.fontFamily },
               size: (paraStyle.fontSize || defaultStyles.fontSize) * 2,
@@ -772,36 +852,37 @@ function createCodeBlockParagraphs(token: any): Paragraph[] {
 }
 
 // 创建列表项
-function createListItemParagraphs(token: any, level: number = 0, formatSettings?: FormatSettings): Paragraph[] {
+async function createListItemParagraphs(token: any, level: number = 0, formatSettings?: FormatSettings): Promise<Paragraph[]> {
   const paragraphs: Paragraph[] = [];
   const paraStyle = formatSettings?.paragraph || defaultStyles;
   const isOrdered = token.ordered || false;
   // 使用更小的圆点符号
   const bulletChars = ['•', '◦', '▪'];
   const bulletChar = isOrdered ? '' : bulletChars[level % 3];
-  
+
   const items = token.items || [];
-  items.forEach((item: any, index: number) => {
-    const prefix = isOrdered ? `${index + 1}. ` : `${bulletChar} `;
-    
+  for (let idx = 0; idx < items.length; idx++) {
+    const item = items[idx];
+    const prefix = isOrdered ? `${idx + 1}. ` : `${bulletChar} `;
+
     // 处理列表项内容
-    let runs: TextRun[] = [];
+    let runs: ParagraphChild[] = [];
     if (item.tokens && Array.isArray(item.tokens)) {
       for (const innerToken of item.tokens) {
         if (innerToken.type === 'text' && innerToken.tokens && Array.isArray(innerToken.tokens)) {
-          runs = runs.concat(parseInlineTokens(innerToken.tokens, {}, formatSettings));
+          runs = runs.concat(await parseInlineTokens(innerToken.tokens, {}, formatSettings));
         } else if (innerToken.type === 'paragraph' && innerToken.tokens) {
-          runs = runs.concat(parseInlineTokens(innerToken.tokens, {}, formatSettings));
+          runs = runs.concat(await parseInlineTokens(innerToken.tokens, {}, formatSettings));
         } else if (innerToken.text) {
           // 使用 parseTextWithFormat 处理文本以支持公式
-          runs = runs.concat(parseTextWithFormat(innerToken.text, formatSettings));
+          runs = runs.concat(await parseTextWithFormat(innerToken.text, formatSettings));
         }
       }
     }
-    
+
     if (runs.length === 0 && item.text) {
       // 使用 parseTextWithFormat 处理文本以支持公式
-      runs = parseTextWithFormat(item.text, formatSettings);
+      runs = await parseTextWithFormat(item.text, formatSettings);
     }
     
     // 添加列表前缀
@@ -826,12 +907,12 @@ function createListItemParagraphs(token: any, level: number = 0, formatSettings?
     if (item.tokens && Array.isArray(item.tokens)) {
       for (const innerToken of item.tokens) {
         if (innerToken.type === 'list') {
-          paragraphs.push(...createListItemParagraphs(innerToken, level + 1, formatSettings));
+          paragraphs.push(...(await createListItemParagraphs(innerToken, level + 1, formatSettings)));
         }
       }
     }
-  });
-  
+  }
+
   return paragraphs;
 }
 
@@ -1075,23 +1156,23 @@ async function markdownToParagraphs(mdContent: string, formatSettings?: FormatSe
                   }
                 } else if (innerToken.type === 'text' && innerToken.text?.trim()) {
                   // 处理图片旁边的文本
-                  elements.push(createParagraphElement({ raw: innerToken.text, text: innerToken.text }, formatSettings));
+                  elements.push(await createParagraphElement({ raw: innerToken.text, text: innerToken.text }, formatSettings));
                 }
               }
               break;
             }
           }
           // 普通段落（不包含图片）
-          elements.push(createParagraphElement(token, formatSettings));
+          elements.push(await createParagraphElement(token, formatSettings));
           break;
         case 'blockquote':
-          elements.push(...createBlockquoteParagraphs(token, formatSettings));
+          elements.push(...(await createBlockquoteParagraphs(token, formatSettings)));
           break;
         case 'code':
           elements.push(...createCodeBlockParagraphs(token));
           break;
         case 'list':
-          elements.push(...createListItemParagraphs(token, 0, formatSettings));
+          elements.push(...(await createListItemParagraphs(token, 0, formatSettings)));
           break;
         case 'table':
           elements.push(createTableElement(token, formatSettings));
