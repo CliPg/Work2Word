@@ -48,6 +48,11 @@ npm run package:all
 ### Windows下载
 右侧release提供安装exe
 
+### Node.js
+```
+npm install -g @clipg/w2w
+# w2w demo.md即可输出相应docx
+```
 
 
 ## 项目结构
