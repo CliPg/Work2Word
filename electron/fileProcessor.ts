@@ -936,50 +936,45 @@ function createHorizontalRuleParagraph(): Paragraph {
 }
 
 // 创建表格
-function createTableElement(token: any, formatSettings?: FormatSettings): Table {
+async function createTableElement(token: any, formatSettings?: FormatSettings): Promise<Table> {
   const tableToken = token as any;
   const paraStyle = formatSettings?.paragraph || defaultStyles;
   const rows: TableRow[] = [];
-  
+
   // 处理表头
   if (tableToken.header && Array.isArray(tableToken.header)) {
-    const headerCells = tableToken.header.map((cell: any) => {
+    const headerCells = [];
+    for (const cell of tableToken.header) {
       const cellText = cell.text || (cell.tokens ? cell.tokens.map((t: any) => t.text || t.raw || '').join('') : '');
-      return new TableCell({
+      const runs = await parseTextWithFormat(cellText, formatSettings, { bold: true });
+      headerCells.push(new TableCell({
         children: [new Paragraph({
-          children: [new TextRun({
-            text: cellText,
-            bold: true,
-            font: { name: paraStyle.fontFamily || defaultStyles.fontFamily },
-            size: (paraStyle.fontSize || defaultStyles.fontSize) * 2,
-          })],
+          children: runs,
           alignment: AlignmentType.CENTER,
         })],
         shading: { fill: 'F0F0F0' },
-      });
-    });
+      }));
+    }
     rows.push(new TableRow({ children: headerCells }));
   }
-  
+
   // 处理表格内容
   if (tableToken.rows && Array.isArray(tableToken.rows)) {
     for (const row of tableToken.rows) {
-      const rowCells = row.map((cell: any) => {
+      const rowCells = [];
+      for (const cell of row) {
         const cellText = cell.text || (cell.tokens ? cell.tokens.map((t: any) => t.text || t.raw || '').join('') : '');
-        return new TableCell({
+        const runs = await parseTextWithFormat(cellText, formatSettings);
+        rowCells.push(new TableCell({
           children: [new Paragraph({
-            children: [new TextRun({
-              text: cellText,
-              font: { name: paraStyle.fontFamily || defaultStyles.fontFamily },
-              size: (paraStyle.fontSize || defaultStyles.fontSize) * 2,
-            })],
+            children: runs,
           })],
-        });
-      });
+        }));
+      }
       rows.push(new TableRow({ children: rowCells }));
     }
   }
-  
+
   return new Table({
     rows,
     width: {
@@ -1175,7 +1170,7 @@ async function markdownToParagraphs(mdContent: string, formatSettings?: FormatSe
           elements.push(...(await createListItemParagraphs(token, 0, formatSettings)));
           break;
         case 'table':
-          elements.push(createTableElement(token, formatSettings));
+          elements.push(await createTableElement(token, formatSettings));
           break;
         case 'hr':
           elements.push(createHorizontalRuleParagraph());
